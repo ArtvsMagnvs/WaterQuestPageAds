@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page</title>
+    <!-- Monetag Script -->
+    <script src='//niphaumeenses.net/vignette.min.js' data-zone='8766745' data-sdk='show_8766745'></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        img {
+            max-width: 90%;
+            height: auto;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: white;
+            color: black;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: gray;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Bienvenido</h1>
+    </header>
+    <main>
+        <img src="https://via.placeholder.com/600x300" alt="Imagen Principal">
+        <button onclick="window.location.href='https://t.me/tu_bot_de_telegram'">Ir a mi Bot de Telegram</button>
+    </main>
+</body>
+</html>
