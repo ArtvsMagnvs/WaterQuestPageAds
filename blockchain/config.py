@@ -1,4 +1,4 @@
-from config.ton_config import TON_CONFIG
+from bot.config.ton_config import TON_CONFIG
 
 # Blockchain network settings
 NETWORK_CONFIG = TON_CONFIG['networks']
