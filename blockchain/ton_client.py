@@ -4,7 +4,7 @@ import logging
 from tonsdk.client import TonClient, TonClientException
 from tonsdk.utils import Address
 from tonsdk.contract import Contract
-from bot.config.ton_config import TON_CONFIG
+from .config.ton_config import TON_CONFIG
 
 logger = logging.getLogger(__name__)
 
