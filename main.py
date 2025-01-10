@@ -11,19 +11,19 @@ from telegram.ext import (
 import logging
 import asyncio
 from datetime import datetime
-from handlers.base import initialize_combat_stats
-from handlers.ads import register_handlers
+from bot.handlers.base import initialize_combat_stats
+from bot.handlers.ads import register_handlers
 
 # Import configurations and save system
-from config.settings import (
+from bot.config.settings import (
     TOKEN, 
     SUCCESS_MESSAGES, 
     ERROR_MESSAGES, 
     logger
 )
-from config.premium_settings import PREMIUM_FEATURES
-from utils.save_system import save_game_data, load_game_data, backup_data
-from utils.keyboard import (
+from bot.config.premium_settings import PREMIUM_FEATURES
+from bot.utils.save_system import save_game_data, load_game_data, backup_data
+from bot.utils.keyboard import (
     generar_botones,
 #    create_waterquest_menu_keyboard,
 #    create_waterquest_dialogue_keyboard
@@ -42,7 +42,7 @@ TonClientError = TonClientException
 #----------------------------------------------------------
 
 # Import all handlers
-from handlers import (
+from bot.handlers import (
     start, button, error_handler,
     help_command, stats_command,
     recolectar, alimentar, estado,
@@ -54,9 +54,9 @@ from handlers import (
     portal_menu, spin_portal
 )
 
-from handlers.miniboss import retry_miniboss_battle
+from bot.handlers.miniboss import retry_miniboss_battle
 
-from handlers.ads import (
+from bot.handlers.ads import (
     ads_menu,
     process_ad_watch,
     retry_combat_ad
