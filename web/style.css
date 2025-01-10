@@ -1,0 +1,129 @@
+/* style.css */
+
+/* Reset de estilos básicos */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Estilos generales de la página */
+body {
+    font-family: Arial, sans-serif;
+    background-color: black;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    text-align: center;
+}
+
+/* Encabezado principal */
+header {
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* Imagen principal */
+img {
+    width: 80%;
+    max-width: 500px;
+    height: auto;
+    margin: 20px 0;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Botón de acción */
+button {
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    background-color: #ffffff;
+    color: #000000;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+}
+
+/* Estilo de hover para el botón */
+button:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+/* Estilo de clic para el botón */
+button:active {
+    background-color: #e0e0e0;
+    transform: translateY(2px);
+}
+
+/* Estado deshabilitado del botón */
+button:disabled {
+    background-color: #d3d3d3;
+    color: #a0a0a0;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Estilo de texto en caso de error o carga */
+.error-message {
+    font-size: 1rem;
+    color: #ff4d4d;
+    margin-top: 20px;
+}
+
+/* Animación de carga */
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 2s linear infinite;
+    margin: 20px auto;
+}
+
+/* Animación de giro para la carga */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estilos de responsividad */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    img {
+        width: 90%;
+    }
+
+    button {
+        font-size: 1rem;
+        padding: 12px 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    button {
+        font-size: 1rem;
+        padding: 10px 20px;
+    }
+}

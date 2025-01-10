@@ -1,0 +1,4 @@
+-r requirements-bot.txt
+-r requirements-web.txt
+-r requirements-ton.txt
+-r requirements-shared.txt
