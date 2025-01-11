@@ -1,7 +1,6 @@
 # main.py
 
 import os
-from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, 
@@ -10,13 +9,16 @@ from telegram.ext import (
     ContextTypes,
     CallbackContext
 )
-app = Flask(__name__)
 
 import logging
 import asyncio
+import requests
 from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
+
+TOKEN = os.getenv('BOT_TOKEN')
+WEBHOOK_SAVE_URL = os.getenv("WEBHOOK_URL")
 
 # Import configurations and save system
 from bot.config.settings import (
@@ -455,22 +457,22 @@ def main():
             interval=21600,  # Every 6 hours
             first=10
         )
-    except Exception as e:
-        print(f"Error occurred: {e}")
-
 
         # Set up webhook
         webhook_url = os.environ.get('WEBHOOK_URL')
-    if webhook_url:
-        application.run_webhook(
-            listen="0.0.0.0",
-            port=int(os.environ.get('PORT', 5000)),
-            url_path=TOKEN,
-            webhook_url=f"{webhook_url}/{TOKEN}"
-        )
-    else:
-        print("WEBHOOK_URL not set. Running in polling mode.")
-        application.run_polling()
+        if webhook_url:
+            application.run_webhook(
+                listen="0.0.0.0",
+                port=int(os.environ.get('PORT', 5000)),
+                url_path=TOKEN,
+                webhook_url=f"{webhook_url}/{TOKEN}"
+            )
+        else:
+            print("WEBHOOK_URL not set. Running in polling mode.")
+            application.run_polling()
+
+    except Exception as e:
+        logger.error(f"Error occurred in main: {e}")
 
 if __name__ == '__main__':
     try:
