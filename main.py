@@ -13,12 +13,14 @@ from telegram.ext import (
 import logging
 import asyncio
 import requests
+from flask import Flask, request
 from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
 
 TOKEN = os.getenv('BOT_TOKEN')
 WEBHOOK_SAVE_URL = os.getenv("WEBHOOK_URL")
+PORT = int(os.environ.get('PORT', 5000))
 
 # Import configurations and save system
 from bot.config.settings import (
@@ -72,14 +74,25 @@ from bot.handlers.ads import (
 application = None
 
 application = Application.builder().token(TOKEN).build()
+app = Flask(__name__)
 
-async def setup_webhook(application: Application) -> None:
-    webhook_url = os.environ.get('WEBHOOK_URL')
-    if webhook_url:
-        await application.bot.set_webhook(url=webhook_url)
-        print(f"Webhook set to {webhook_url}")
-    else:
-        print("WEBHOOK_URL not set. Please set it in the environment variables.")
+@app.route('/' + TOKEN, methods=['POST'])
+def webhook():
+    """Maneja las actualizaciones entrantes del webhook."""
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.process_update(update)
+    return 'OK'
+
+@app.route('/')
+def index():
+    return 'Hello, World!'
+
+if __name__ == '__main__':
+    # Configura el webhook
+    application.bot.set_webhook(url=WEBHOOK_SAVE_URL + TOKEN)
+    
+    # Inicia el servidor Flask
+    app.run(host='0.0.0.0', port=PORT)
 
 asyncio.run(setup_webhook(application))
 
