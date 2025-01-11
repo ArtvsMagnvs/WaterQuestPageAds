@@ -1,30 +1,27 @@
 # utils/save_system.py
 
-import os
 import json
 import logging
 from pathlib import Path
 from datetime import datetime
 import shutil
 from typing import Dict, Optional
-import asyncio
-import requests
-from concurrent.futures import ThreadPoolExecutor
 
 # Constants
 SAVE_FILE = 'game_data.json'
 BACKUP_DIR = 'backups'
 MAX_BACKUPS = 5
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 # Configure logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 def save_game_data(data: Dict) -> bool:
     """
-    Save game data to file with backup creation and send to webhook.
+    Save game data to file with backup creation.
     
     Args:
         data: Dictionary with game data to save
@@ -57,31 +54,13 @@ def save_game_data(data: Dict) -> bool:
         # Save new data with pretty formatting
         with open(SAVE_FILE, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        
-        # Send data to webhook in a separate thread
-        with ThreadPoolExecutor() as executor:
-            executor.submit(send_to_webhook, data)
-        
+            
         logger.info("Game data saved successfully")
         return True
         
     except Exception as e:
         logger.error(f"Error saving game data: {e}")
         return False
-
-def send_to_webhook(data: Dict):
-    """
-    Send data to webhook.
-    
-    Args:
-        data: Dictionary with game data to send
-    """
-    try:
-        response = requests.post(WEBHOOK_URL, json=data, timeout=10)
-        response.raise_for_status()
-        logger.info("Data sent to webhook successfully")
-    except requests.RequestException as e:
-        logger.error(f"Error sending data to webhook: {e}")
 
 def load_game_data() -> Dict:
     """
@@ -259,3 +238,4 @@ def get_save_info() -> Dict:
     except Exception as e:
         logger.error(f"Error getting save info: {e}")
         return {}
+    
