@@ -150,7 +150,12 @@ async def button(update: Update, context: CallbackContext):
 
         # Get player data for menu generation
         user_id = query.from_user.id
-        player = context.bot_data['players'].get(user_id) if user_id in context.bot_data.get('players', {}) else None
+        player = context.bot_data.get('players', {}).get(user_id)
+
+        if player is None:
+            logger.warning(f"Player data not found for user_id: {user_id}")
+            await query.message.reply_text(ERROR_MESSAGES["player_not_found"])
+            return
 
         # Route to appropriate handler based on callback_data
         if query.data == "start":
@@ -171,7 +176,7 @@ async def button(update: Update, context: CallbackContext):
             await siguiente_miniboss(update, context)
         elif query.data == "retirarse_miniboss":
             await retirarse_miniboss(update, context)
-        elif query.data.startswith("retry_miniboss_"):  # Add this new handler
+        elif query.data.startswith("retry_miniboss_"):
             await retry_miniboss_battle(update, context)
         elif query.data == "daily_reward":
             await claim_daily_reward(update, context)
@@ -182,8 +187,6 @@ async def button(update: Update, context: CallbackContext):
             await portal_menu(update, context)
         elif query.data.startswith("portal_spin_"):
             await spin_portal(update, context)
-
-        # Handlers para anuncios
         elif query.data == "ads_menu":
             await ads_menu(update, context)
         elif query.data == "watch_ad":
@@ -191,10 +194,6 @@ async def button(update: Update, context: CallbackContext):
         elif query.data.startswith("retry_miniboss_"):
             combat_type = query.data.split("_")[3]  # Extraer el tipo de combate
             await retry_combat_ad(update, context, combat_type)
-
-    
-        # WaterQuest handlers
-        
         else:
             logger.warning(f"Unhandled callback_data: {query.data}")
             await query.message.reply_text(
