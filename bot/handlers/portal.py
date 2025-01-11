@@ -186,7 +186,7 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💎 WaterShards obtenidos: {player.get('watershard', 0)} WTR\n"
             f"🎫 Fragmentos disponibles: {tickets}\n\n"
             f"🎲 Giros totales: {player['portal_stats']['total_spins']}\n"
-            f"⭐ Giros hasta legendario garantizado: {PITY_SYSTEM['legendary_pity'] - player['portal_stats']['spins_since_legendary']}"
+            f"⭐ Giros hasta legendario garantizado: {PITY_SYSTEM['legendary_pity'] - player['portal_stats']['spins_since_legendary']}\n"
             f"💫 Giros hasta epico garantizado: {PITY_SYSTEM['epic_pity'] - player['portal_stats']['spins_since_epic']} giros\n"
             f"✨ Giros hasta raro garantizado: {PITY_SYSTEM['rare_pity'] - player['portal_stats']['spins_since_rare']} giros"
 

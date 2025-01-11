@@ -18,7 +18,7 @@ HORA_EN_SEGUNDOS = 8 * 60 * 60
 AUTO_SAVE_INTERVAL = 300  # 5 minutes in seconds
 
 # Image Paths
-IMAGES_DIR = Path("images")
+IMAGES_DIR = Path("bot.images")
 IMAGE_PATHS = {
     'estado': IMAGES_DIR / "1.webp",
     'recolectar': IMAGES_DIR / "2.webp",
