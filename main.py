@@ -83,12 +83,6 @@ async def setup_webhook(application: Application) -> None:
 
 asyncio.run(setup_webhook(application))
 
-@app.route(f'/{TOKEN}', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    asyncio.run(application.process_update(update))
-    return 'OK'
-
 def save_game_data(data):
     try:
         response = requests.post(WEBHOOK_SAVE_URL, json=data)
