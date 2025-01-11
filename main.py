@@ -76,23 +76,19 @@ application = None
 application = Application.builder().token(TOKEN).build()
 app = Flask(__name__)
 
-@app.route('/' + TOKEN, methods=['POST'])
-def webhook():
-    """Maneja las actualizaciones entrantes del webhook."""
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    application.process_update(update)
-    return 'OK'
-
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
+    if request.method == 'POST':
+        return 'POST recibido, pero no se necesita manejar aquí.'
     return 'Hello, World!'
+
 
 if __name__ == '__main__':
     # Configura el webhook
     application.bot.set_webhook(url=WEBHOOK_SAVE_URL + TOKEN)
     
     # Inicia el servidor Flask
-    app.run(host='0.0.0.0', port=PORT)
+    app.run(host='0.0.0.0:8080', port=PORT)
 
 asyncio.run(setup_webhook(application))
 
@@ -469,7 +465,7 @@ def main():
         webhook_url = os.environ.get('WEBHOOK_URL')
         if webhook_url:
             application.run_webhook(
-                listen="0.0.0.0",
+                listen="0.0.0.0:8080",
                 port=int(os.environ.get('PORT', 5000)),
                 url_path=TOKEN,
                 webhook_url=f"{webhook_url}/{TOKEN}"
