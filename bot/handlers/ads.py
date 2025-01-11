@@ -6,7 +6,7 @@ import asyncio
 import json
 import aiohttp
 from telegram.ext import CallbackQueryHandler
-from config.ads_config import AD_CONFIG  # Importar la configuración de anuncios
+from bot.config.ads_config import AD_CONFIG  # Importar la configuración de anuncios
 
 logger = logging.getLogger(__name__)
 

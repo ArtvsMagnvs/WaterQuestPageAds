@@ -6,7 +6,7 @@ import time
 import logging
 from datetime import datetime
 
-from config.settings import (
+from bot.config.settings import (
     SUCCESS_MESSAGES,
     ERROR_MESSAGES,
     logger,
@@ -16,9 +16,9 @@ from config.settings import (
     MAX_ENERGY,
     MAX_HUNGER
 )
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
-from config.premium_settings import PREMIUM_FEATURES
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
+from bot.config.premium_settings import PREMIUM_FEATURES
 
 async def actualizar_estados(player):
     """Update pet's hunger, energy, and gold based on time passed."""

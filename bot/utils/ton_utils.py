@@ -13,8 +13,8 @@ from typing import Tuple
 from tonsdk.contract import Contract
 from tonsdk.utils import Address
 
-from config.ton_config import TON_CONFIG
-from utils.save_system import save_game_data
+from bot.config.ton_config import TON_CONFIG
+from bot.utils.save_system import save_game_data
 
 from typing import Tuple
 import logging

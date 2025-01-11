@@ -15,9 +15,9 @@ from config.settings import (
     EXP_MULTIPLIER,
     GOLD_PER_LEVEL
 )
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
-from config.premium_settings import PREMIUM_FEATURES
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
+from bot.config.premium_settings import PREMIUM_FEATURES
 
 def calculate_rewards(enemy_level: int, is_premium: bool) -> dict:
     """Calculate rewards for combat victory."""

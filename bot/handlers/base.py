@@ -6,9 +6,9 @@ import logging
 from datetime import datetime
 
 # Import configurations and utilities
-from config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
+from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
 
 # Import other handlers
 from .combat import quick_combat

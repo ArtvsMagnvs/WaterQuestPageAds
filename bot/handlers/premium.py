@@ -1,4 +1,4 @@
-from config.premium_settings import PREMIUM_FEATURES
+from bot.config.premium_settings import PREMIUM_FEATURES
 from telegram.ext import ContextTypes
 import time
 

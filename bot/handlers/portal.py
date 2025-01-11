@@ -7,14 +7,14 @@ import logging
 import asyncio
 from datetime import datetime
 
-from config.settings import (
+from bot.config.settings import (
     SUCCESS_MESSAGES, 
     ERROR_MESSAGES, 
     logger,
     MAX_ENERGY
 )
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
 
 PORTAL_REWARDS = {
     "legendary": {  # 1% probabilidad

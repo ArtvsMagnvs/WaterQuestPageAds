@@ -23,7 +23,7 @@ from .pet import (
 )
 
 from .daily import claim_daily_reward, check_daily_reset, check_weekly_tickets
-from config.premium_settings import PREMIUM_FEATURES
+from bot.config.premium_settings import PREMIUM_FEATURES
 
 from .portal import (
     portal_menu, 

@@ -7,15 +7,15 @@ import logging
 from datetime import datetime, timedelta
 import pytz
 from .premium import distribute_weekly_tickets
-from config.settings import (
+from bot.config.settings import (
     DAILY_REWARDS,
     SUCCESS_MESSAGES,
     ERROR_MESSAGES,
     logger
 )
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
-from config.premium_settings import PREMIUM_FEATURES
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
+from bot.config.premium_settings import PREMIUM_FEATURES
 
 def get_next_midnight_cet():
     cet = pytz.timezone('CET')

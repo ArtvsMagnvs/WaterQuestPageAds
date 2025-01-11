@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from .config import NETWORK_CONFIG, CONTRACT_CONFIG
+from bot.config import NETWORK_CONFIG, CONTRACT_CONFIG
 
 def get_network_params(network: str = 'testnet') -> Dict[str, Any]:
     """Get network configuration parameters"""

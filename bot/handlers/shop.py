@@ -4,11 +4,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import logging
 
-from config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
-from config.shop_items import SHOP_ITEMS, ShopManager
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
-from config.premium_settings import PREMIUM_FEATURES
+from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
+from bot.config.shop_items import SHOP_ITEMS, ShopManager
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
+from bot.config.premium_settings import PREMIUM_FEATURES
 
 #---------------------------------------------------------------
 # Temporarily comment out TON SDK imports

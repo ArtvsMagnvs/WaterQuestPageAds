@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 import random
 import logging
 from datetime import datetime
-from config.settings import (
+from bot.config.settings import (
     SUCCESS_MESSAGES, 
     ERROR_MESSAGES, 
     logger,
@@ -12,10 +12,10 @@ from config.settings import (
     MIN_MINIBOSS_GOLD,
     calculate_miniboss_probabilities
 )
-from utils.keyboard import generar_botones
-from utils.save_system import save_game_data
-from config.premium_settings import PREMIUM_FEATURES
-from handlers.ads import retry_combat_ad
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
+from bot.config.premium_settings import PREMIUM_FEATURES
+from bot.handlers.ads import retry_combat_ad
 
 # Store active miniboss battles
 miniboss_estado = {}

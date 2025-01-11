@@ -22,9 +22,9 @@ GAME_INFO = {
 }
 
 # Import main components for easier access
-from .config.settings import *
-from .handlers import *
-from .utils import *
+from bot.config.settings import *
+from bot.handlers import *
+from bot.utils import *
 
 # Define what gets imported with "from WaterQuest import *"
 __all__ = [
