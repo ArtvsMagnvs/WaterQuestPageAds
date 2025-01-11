@@ -1,6 +1,6 @@
 # handlers/__init__.py
 
-from .base import (
+from bot.handlers.base import (
     start, 
     button, 
     error_handler, 

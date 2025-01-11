@@ -11,11 +11,11 @@ from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 
 # Import other handlers
-from .combat import quick_combat
-from .miniboss import miniboss_handler
-from .daily import claim_daily_reward
-from .shop import tienda, comprar
-from .pet import recolectar, alimentar, estado
+from bot.handlers.combat import quick_combat
+from bot.handlers.miniboss import miniboss_handler
+from bot.handlers.daily import claim_daily_reward
+from bot.handlers.shop import tienda, comprar
+from bot.handlers.pet import recolectar, alimentar, estado
 
 def initialize_combat_stats(level):
     """Initialize combat stats for a new player."""
