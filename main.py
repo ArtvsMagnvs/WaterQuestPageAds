@@ -1,5 +1,7 @@
 # main.py
 
+import os
+from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, 
@@ -8,6 +10,8 @@ from telegram.ext import (
     ContextTypes,
     CallbackContext
 )
+app = Flask(__name__)
+
 import logging
 import asyncio
 from datetime import datetime
@@ -21,6 +25,7 @@ from bot.config.settings import (
     ERROR_MESSAGES, 
     logger
 )
+from bot.config.settings import WEBHOOK_SAVE_URL
 from bot.config.premium_settings import PREMIUM_FEATURES
 from bot.utils.save_system import save_game_data, load_game_data, backup_data
 from bot.utils.keyboard import (
@@ -61,6 +66,49 @@ from bot.handlers.ads import (
     process_ad_watch,
     retry_combat_ad
 )
+
+application = None
+
+application = Application.builder().token(TOKEN).build()
+
+async def setup_webhook(application: Application) -> None:
+    webhook_url = os.environ.get('WEBHOOK_URL')
+    if webhook_url:
+        await application.bot.set_webhook(url=webhook_url)
+        print(f"Webhook set to {webhook_url}")
+    else:
+        print("WEBHOOK_URL not set. Please set it in the environment variables.")
+
+asyncio.run(setup_webhook(application))
+
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    asyncio.run(application.process_update(update))
+    return 'OK'
+
+def save_game_data(data):
+    try:
+        response = requests.post(WEBHOOK_SAVE_URL, json=data)
+        if response.status_code == 200:
+            print("Datos guardados exitosamente")
+        else:
+            print(f"Error al guardar datos: {response.status_code}")
+    except Exception as e:
+        print(f"Error al enviar datos al webhook: {str(e)}")
+
+def load_game_data():
+    try:
+        response = requests.get(WEBHOOK_SAVE_URL)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error al cargar datos: {response.status_code}")
+            return {}
+    except Exception as e:
+        print(f"Error al obtener datos del webhook: {str(e)}")
+        return {}
+
 
 def initialize_new_player():
     """Initialize data for a new player."""
@@ -362,6 +410,7 @@ async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
 def main():
     """Start the bot."""
     try:
+        global application
         # Create application
         application = Application.builder().token(TOKEN).build()
 
@@ -391,7 +440,7 @@ def main():
             check_weekly_tickets,
             interval=86400,  # Check daily
             first=10
-)
+        )
 
         # Add premium expiry check
         application.job_queue.run_repeating(
@@ -406,26 +455,31 @@ def main():
             interval=21600,  # Every 6 hours
             first=10
         )
- 
-        # Start the bot
-        print("Bot iniciado...")
+    except Exception as e:
+        print(f"Error occurred: {e}")
+
+
+        # Set up webhook
+        webhook_url = os.environ.get('WEBHOOK_URL')
+    if webhook_url:
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=int(os.environ.get('PORT', 5000)),
+            url_path=TOKEN,
+            webhook_url=f"{webhook_url}/{TOKEN}"
+        )
+    else:
+        print("WEBHOOK_URL not set. Running in polling mode.")
         application.run_polling()
 
-        return application  # Return the application for cleanup
-
-    except Exception as e:
-        logger.error(f"Error starting bot: {e}")
-        return None
-
 if __name__ == '__main__':
-    app = None
     try:
-        app = main()
+        main()
     except KeyboardInterrupt:
         print("\nBot detenido manualmente")
     finally:
         # Save data on shutdown if application was created
-        if app and hasattr(app, 'bot_data') and 'players' in app.bot_data:
-            save_game_data(app.bot_data['players'])
-            backup_data(app.bot_data['players'])
+        if 'application' in globals() and hasattr(application, 'bot_data') and 'players' in application.bot_data:
+            save_game_data(application.bot_data['players'])
+            backup_data(application.bot_data['players'])
             print("Datos guardados. ¡Hasta luego!")
