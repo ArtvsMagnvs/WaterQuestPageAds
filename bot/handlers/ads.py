@@ -10,6 +10,8 @@ from bot.config.ads_config import AD_CONFIG  # Importar la configuración de anu
 from telegram.ext import ConversationHandler
 from typing import Dict, Any
 
+FRONTEND_URL = "https://artvsmagnvs.github.io/WaterQuest.game/"
+
 logger = logging.getLogger(__name__)
 
 class MonetagAd:
@@ -104,7 +106,6 @@ async def ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Processes the ad viewing and rewards."""
     user_id = update.callback_query.from_user.id
     player = context.bot_data['players'].get(user_id)
     
@@ -112,7 +113,6 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.message.reply_text("❌ Error: Player not found.")
         return
 
-    # Check if the player has reached the daily ad limit
     daily_limit = AD_CONFIG.get('daily_limit', 100)
     if player.get("daily_ads", 0) >= daily_limit:
         await update.callback_query.message.reply_text(
@@ -125,60 +125,77 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     try:
-        # Initiate the Monetag ad process
-        ad_result = await MonetagAd.initiate_ad()
+        # Iniciar el anuncio de Monetag
+        ad_result = await initiate_monetag_ad()
         
         if not ad_result["success"]:
             await loading_message.edit_text(f"❌ Error loading the ad: {ad_result['error']}")
             return
 
-        ad_data = ad_result["ad_data"]
-        ad_id = ad_data.get("ad_id")
-        ad_url = ad_data.get("ad_url")
+        ad_url = ad_result["ad_url"]
+        ad_id = ad_result["ad_id"]
 
-        if not ad_url:
-            await loading_message.edit_text("❌ Error: No ad URL provided.")
-            return
-
-        # Provide the user with the ad URL
         await loading_message.edit_text(
             f"📺 Please click the link below to view the ad:\n\n{ad_url}\n\nAfter viewing, click 'Ad Viewed' button.",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Ad Viewed", callback_data="ad_viewed")]
+                [InlineKeyboardButton("Ad Viewed", callback_data=f"ad_viewed:{ad_id}")]
             ])
         )
 
-        # Wait for user confirmation
-        def check_callback(query: CallbackQuery) -> bool:
-            return query.from_user.id == update.effective_user.id and query.data == "ad_viewed"
-
+        # Esperar la confirmación del usuario
         try:
-            await context.bot.wait_for_callback_query(check=check_callback, timeout=300)
+            query = await context.bot.wait_for_callback_query(
+                lambda q: q.from_user.id == update.effective_user.id and q.data.startswith("ad_viewed:"),
+                timeout=300
+            )
         except asyncio.TimeoutError:
             await loading_message.edit_text("❌ Timeout: Ad viewing not confirmed.")
             return
 
-        # Verify the ad view
-        if await MonetagAd.verify_ad_view(ad_id):
-            await loading_message.edit_text("✅ Ad view verified. Processing rewards...")
+        # Verificar la visualización del anuncio
+        viewed_ad_id = query.data.split(":")[1]
+        if await verify_ad_view(viewed_ad_id):
+            await loading_message.edit_text("✅ Ad view confirmed. Processing rewards...")
             
-            # Update daily ad count
+            # Actualizar el conteo diario de anuncios
             player["daily_ads"] = player.get("daily_ads", 0) + 1
             
-            # Grant rewards
+            # Otorgar recompensas
             rewards = await grant_ad_rewards(player)
             
             rewards_message = "🎁 Rewards obtained:\n" + "\n".join(rewards)
             await update.callback_query.message.reply_text(rewards_message)
             
-            # Check for milestones
+            # Verificar hitos
             await check_ad_milestones(update, context, player)
         else:
-            await loading_message.edit_text("❌ Ad view could not be verified. No rewards granted.")
+            await loading_message.edit_text("❌ Ad view could not be verified. Please try again.")
 
     except Exception as e:
         logger.error(f"Error in process_ad_watch: {str(e)}")
         await loading_message.edit_text("❌ An unexpected error occurred. Please try again later.")
+
+async def initiate_monetag_ad():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{FRONTEND_URL}/initiate-ad") as response:
+            if response.status == 200:
+                data = await response.json()
+                return {
+                    "success": True,
+                    "ad_url": data["ad_url"],
+                    "ad_id": data["ad_id"]
+                }
+            else:
+                return {"success": False, "error": "Failed to initiate ad"}
+
+async def verify_ad_view(ad_id):
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{FRONTEND_URL}/verify-ad", json={"ad_id": ad_id}) as response:
+            if response.status == 200:
+                data = await response.json()
+                return data["verified"]
+            else:
+                return False
 
 async def grant_ad_rewards(player):
     """Grants rewards for watching an ad."""
