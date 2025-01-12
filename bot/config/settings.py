@@ -175,7 +175,7 @@ DAILY_REWARDS = {
         "comida": (10, 20),
         "energia": 100,
         "exp": (50, 100),
-        "fragmento del destino": (100, 250)
+        "fragmento_del_destino": (100, 300)
     },
     "premium": {
         "oro": (500, 2000),
@@ -216,6 +216,7 @@ def calculate_daily_rewards(reward_type: str, player_level: int, prestige_level:
     min_coral, max_coral = base_rewards["coral"]
     min_comida, max_comida = base_rewards["comida"]
     min_exp, max_exp = base_rewards["exp"]
+    min_fragmento, max_fragmento = base_rewards["fragmento_del_destino"]
     
     return {
         "oro": (
@@ -234,6 +235,10 @@ def calculate_daily_rewards(reward_type: str, player_level: int, prestige_level:
         "exp": (
             int(min_exp * level_multiplier * prestige_multiplier),
             int(max_exp * level_multiplier * prestige_multiplier)
+        ),
+        "fragmento_del_destino": (
+            int(min_fragmento * prestige_multiplier),
+            int(max_fragmento * prestige_multiplier)
         )
     }
 
