@@ -12,7 +12,7 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 SAVE_FILE = 'game_data.json'
 BACKUP_DIR = 'backups'
 MAX_BACKUPS = 5
-WEBHOOK_SAVE_URL = os.getenv("WEBHOOK_URL")
+
 
 # Time Constants
 HORA_EN_SEGUNDOS = 8 * 60 * 60

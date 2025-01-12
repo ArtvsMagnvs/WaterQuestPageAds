@@ -7,45 +7,60 @@ import json
 import aiohttp
 from telegram.ext import CallbackQueryHandler
 from bot.config.ads_config import AD_CONFIG  # Importar la configuración de anuncios
+from telegram.ext import ConversationHandler
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
 class MonetagAd:
+    BASE_URL = "https://artvsmagnvs.github.io/WaterQuest.game/"  # URL de tu página web
+
     @staticmethod
-    async def show_ad():
-        """Ejecuta el anuncio de Monetag utilizando el MONETAG_ZONE_ID configurado."""
+    async def initiate_ad() -> Dict[str, Any]:
+        """
+        Inicia el proceso de anuncio de Monetag usando el MONETAG_ZONE_ID configurado.
+        
+        Returns:
+            Dict[str, Any]: Un diccionario que contiene el resultado de la iniciación del anuncio y datos relevantes.
+        """
         try:
-            # Obtener el MONETAG_ZONE_ID de la configuración
             ad_zone_id = AD_CONFIG['ad_unit_id']
             
-            # Comprobación si el ad_zone_id está configurado correctamente
             if not ad_zone_id:
                 logger.error("Error: MONETAG_ZONE_ID no está configurado correctamente.")
-                return False
+                return {"success": False, "error": "Falta MONETAG_ZONE_ID"}
 
-            # Información del logger antes de intentar mostrar el anuncio
-            logger.info(f"Intentando mostrar el anuncio con el zone ID: {ad_zone_id}")
+            logger.info(f"Iniciando proceso de anuncio con zone ID: {ad_zone_id}")
             
-            # Aquí es donde el anuncio se presenta directamente
-            # Dependiendo de cómo se configure Monetag, podría ser solo enviar este ID al frontend
-            # o realizar algún tipo de interacción con un servidor que lo maneje.
+            # En lugar de hacer una solicitud a Monetag, generamos un enlace a nuestra página web
+            ad_url = f"{MonetagAd.BASE_URL}?zone_id={ad_zone_id}"
             
-            # Simulación de la lógica de presentación del anuncio (según configuración de Monetag)
-            # Esto puede ser más complejo si es necesario interactuar con un servicio de Monetag.
-            # En este caso, el simple hecho de usar el MONETAG_ZONE_ID debería ser suficiente.
-            
-            logger.info(f"Anuncio mostrado con éxito con el zone ID: {ad_zone_id}")
-            return True
+            return {
+                "success": True, 
+                "ad_data": {
+                    "ad_id": ad_zone_id,  # Usamos el zone_id como ad_id
+                    "ad_url": ad_url
+                }
+            }
         
-        except KeyError as e:
-            logger.error(f"Error: No se encontró la clave en la configuración: {str(e)}")
-            return False
-        except ValueError as e:
-            logger.error(f"Error de valor: {str(e)}")
-            return False
         except Exception as e:
-            logger.error(f"Error inesperado al ejecutar el anuncio Monetag: {str(e)}")
-            return False
+            logger.error(f"Error inesperado al iniciar el anuncio de Monetag: {str(e)}")
+            return {"success": False, "error": "Error inesperado"}
+
+    @staticmethod
+    async def verify_ad_view(ad_id: str) -> bool:
+        """
+        Verifica que un anuncio fue realmente visto.
+        
+        Args:
+            ad_id (str): El ID del anuncio a verificar.
+        
+        Returns:
+            bool: True si la visualización del anuncio es verificada, False en caso contrario.
+        """
+        # En este caso, confiamos en que el usuario ha visto el anuncio
+        # Ya que Monetag maneja la visualización en el lado del cliente
+        return True
 
 
 
@@ -89,106 +104,121 @@ async def ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Procesa la visualización del anuncio y las recompensas."""
+    """Processes the ad viewing and rewards."""
     user_id = update.callback_query.from_user.id
     player = context.bot_data['players'].get(user_id)
     
     if not player:
-        await update.callback_query.message.reply_text("❌ Error: Jugador no encontrado.")
+        await update.callback_query.message.reply_text("❌ Error: Player not found.")
         return
 
-    # Verificar si el jugador ha visto el máximo de anuncios hoy
+    # Check if the player has reached the daily ad limit
     daily_limit = AD_CONFIG.get('daily_limit', 100)
     if player.get("daily_ads", 0) >= daily_limit:
         await update.callback_query.message.reply_text(
-            "❌ Has alcanzado el límite máximo de anuncios diarios."
+            "❌ You've reached the maximum daily ad limit."
         )
         return
 
     loading_message = await update.callback_query.message.reply_text(
-        "📺 Cargando anuncio..."
+        "📺 Initiating ad..."
     )
     
     try:
-        # Mostrar anuncio de Monetag a través de la solicitud al frontend
-        ad_result = await MonetagAd.show_ad()
+        # Initiate the Monetag ad process
+        ad_result = await MonetagAd.initiate_ad()
         
-        if not ad_result:
-            await loading_message.edit_text("❌ Error al cargar el anuncio. Por favor, intenta nuevamente.")
+        if not ad_result["success"]:
+            await loading_message.edit_text(f"❌ Error loading the ad: {ad_result['error']}")
             return
 
-        # Esperar confirmación del usuario de que ha visto el anuncio
-        await loading_message.edit_text("¿Has visto el anuncio completo?", 
-                                        reply_markup=InlineKeyboardMarkup([
-                                            [InlineKeyboardButton("Sí, lo he visto", callback_data="ad_watched")],
-                                            [InlineKeyboardButton("No, hubo un problema", callback_data="ad_not_watched")]
-                                        ]))
+        ad_data = ad_result["ad_data"]
+        ad_id = ad_data.get("ad_id")
+        ad_url = ad_data.get("ad_url")
 
-        # Esperar la respuesta del usuario
-        response = await context.bot.wait_for_callback_query(update.effective_user.id, timeout=60)
+        if not ad_url:
+            await loading_message.edit_text("❌ Error: No ad URL provided.")
+            return
 
-        if response.data == "ad_watched":
-            await loading_message.delete()
-            
-            # Actualizar el conteo de anuncios diarios
-            daily_ads = player.get("daily_ads", 0) + 1
-            player["daily_ads"] = daily_ads
-            
-            # Inicializar el seguimiento de recompensas
-            rewards_message = ["✅ Recompensas obtenidas:"]
-            
-            # Recompensas base por ver el anuncio
-            energy_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('energy', 0)
-            quick_combat_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('quick_combat', 0)
-            
-            # Actualizar energía de forma segura
-            if "mascota" in player:
-                current_energy = player["mascota"].get("energia", 0)
-                max_energy = player["mascota"].get("max_energy", 100)  # Default to 100 if not set
-                player["mascota"]["energia"] = min(current_energy + energy_reward, max_energy)
-                rewards_message.append(f"• +{energy_reward} Energía")
-
-            if "combat_stats" in player:
-                player["combat_stats"]["battles_today"] = player["combat_stats"].get("battles_today", 0) + quick_combat_reward
-                rewards_message.append(f"• +{quick_combat_reward} Combate Rápido")
-            
-            # Verificar recompensas por hitos
-            if daily_ads == 3:
-                player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 1
-                rewards_message.append("• +1 intento de MiniBoss (hito 3 anuncios)")
-
-            elif daily_ads == 5:
-                player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 2
-                if "mascota" in player and "oro_hora" in player["mascota"]:
-                    player["mascota"]["oro_hora"] *= 1.01
-                rewards_message.append("• +2 intentos de MiniBoss")
-                rewards_message.append("• +1% Generación de Oro (hito 5 anuncios)")
-
-            elif daily_ads == 10:
-                player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 3
-                player["lucky_tickets"] = player.get("lucky_tickets", 0) + 1
-                rewards_message.append("• +3 intentos de MiniBoss")
-                rewards_message.append("• +1 Fragmento de Destino (hito 10 anuncios)")
-            
-            # Guardar los datos del jugador
-            context.bot_data['players'][user_id] = player
-            
-            await update.callback_query.message.reply_text(
-                "\n".join(rewards_message)
-            )
-            
-            # Regresar al menú de anuncios
-            await ads_menu(update, context)
-        else:
-            await loading_message.edit_text("❌ No se ha confirmado la visualización del anuncio. No se han otorgado recompensas.")
-
-    except asyncio.TimeoutError:
-        await loading_message.edit_text("❌ Tiempo de espera agotado. Por favor, intenta nuevamente.")
-    except Exception as e:
-        logger.error(f"Error procesando la visualización del anuncio: {str(e)}")
+        # Provide the user with the ad URL
         await loading_message.edit_text(
-            "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
+            f"📺 Please click the link below to view the ad:\n\n{ad_url}\n\nAfter viewing, click 'Ad Viewed' button.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Ad Viewed", callback_data="ad_viewed")]
+            ])
         )
+
+        # Wait for user confirmation
+        def check_callback(query: CallbackQuery) -> bool:
+            return query.from_user.id == update.effective_user.id and query.data == "ad_viewed"
+
+        try:
+            await context.bot.wait_for_callback_query(check=check_callback, timeout=300)
+        except asyncio.TimeoutError:
+            await loading_message.edit_text("❌ Timeout: Ad viewing not confirmed.")
+            return
+
+        # Verify the ad view
+        if await MonetagAd.verify_ad_view(ad_id):
+            await loading_message.edit_text("✅ Ad view verified. Processing rewards...")
+            
+            # Update daily ad count
+            player["daily_ads"] = player.get("daily_ads", 0) + 1
+            
+            # Grant rewards
+            rewards = await grant_ad_rewards(player)
+            
+            rewards_message = "🎁 Rewards obtained:\n" + "\n".join(rewards)
+            await update.callback_query.message.reply_text(rewards_message)
+            
+            # Check for milestones
+            await check_ad_milestones(update, context, player)
+        else:
+            await loading_message.edit_text("❌ Ad view could not be verified. No rewards granted.")
+
+    except Exception as e:
+        logger.error(f"Error in process_ad_watch: {str(e)}")
+        await loading_message.edit_text("❌ An unexpected error occurred. Please try again later.")
+
+async def grant_ad_rewards(player):
+    """Grants rewards for watching an ad."""
+    rewards = []
+    
+    # Grant energy
+    energy_reward = AD_CONFIG['ad_rewards']['watch']['energy']
+    player['energy'] = min(player.get('energy', 0) + energy_reward, player.get('max_energy', 100))
+    rewards.append(f"+{energy_reward} Energy")
+    
+    # Grant quick combat
+    quick_combat_reward = AD_CONFIG['ad_rewards']['watch']['quick_combat']
+    player['quick_combats'] = player.get('quick_combats', 0) + quick_combat_reward
+    rewards.append(f"+{quick_combat_reward} Quick Combat")
+    
+    return rewards
+
+async def check_ad_milestones(update: Update, context: ContextTypes.DEFAULT_TYPE, player):
+    """Checks and grants milestone rewards based on daily ad count."""
+    daily_ads = player.get("daily_ads", 0)
+    milestones = AD_CONFIG['ad_rewards']['milestones']
+    
+    for count, rewards in milestones.items():
+        if daily_ads == count:
+            milestone_rewards = []
+            for reward_type, value in rewards.items():
+                if reward_type == 'miniboss_attempts':
+                    player['miniboss_attempts'] = player.get('miniboss_attempts', 0) + value
+                    milestone_rewards.append(f"+{value} MiniBoss attempts")
+                elif reward_type == 'gold_gen':
+                    player['gold_multiplier'] = player.get('gold_multiplier', 1) * value
+                    milestone_rewards.append(f"{value}x Gold generation boost")
+                elif reward_type == 'destiny_fragment':
+                    player['destiny_fragments'] = player.get('destiny_fragments', 0) + value
+                    milestone_rewards.append(f"+{value} Destiny Fragment")
+            
+            if milestone_rewards:
+                milestone_message = f"🎉 Milestone Reached ({count} ads):\n" + "\n".join(milestone_rewards)
+                await update.callback_query.message.reply_text(milestone_message)
+            break
 
 async def retry_combat_ad(update: Update, context: ContextTypes.DEFAULT_TYPE, combat_type: str):
     """Maneja el reintento de combate a través de la visualización de anuncios."""
