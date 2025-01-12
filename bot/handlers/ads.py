@@ -18,36 +18,34 @@ class MonetagAd:
     BASE_URL = "https://artvsmagnvs.github.io/WaterQuest.game/"  # URL de tu página web
 
     @staticmethod
-    async def initiate_ad() -> Dict[str, Any]:
-        """
-        Inicia el proceso de anuncio de Monetag usando el MONETAG_ZONE_ID configurado.
+async def initiate_ad() -> Dict[str, Any]:
+    try:
+        logger.info("Iniciando función initiate_ad")
+        ad_zone_id = AD_CONFIG.get('ad_unit_id')
+        logger.info(f"ad_zone_id obtenido: {ad_zone_id}")
         
-        Returns:
-            Dict[str, Any]: Un diccionario que contiene el resultado de la iniciación del anuncio y datos relevantes.
-        """
-        try:
-            ad_zone_id = AD_CONFIG['ad_unit_id']
-            
-            if not ad_zone_id:
-                logger.error("Error: MONETAG_ZONE_ID no está configurado correctamente.")
-                return {"success": False, "error": "Falta MONETAG_ZONE_ID"}
+        if not ad_zone_id:
+            logger.error("Error: MONETAG_ZONE_ID no está configurado correctamente.")
+            return {"success": False, "error": "Falta MONETAG_ZONE_ID"}
 
-            logger.info(f"Iniciando proceso de anuncio con zone ID: {ad_zone_id}")
-            
-            # En lugar de hacer una solicitud a Monetag, generamos un enlace a nuestra página web
-            ad_url = f"{MonetagAd.BASE_URL}?zone_id={ad_zone_id}"
-            
-            return {
-                "success": True, 
-                "ad_data": {
-                    "ad_id": ad_zone_id,  # Usamos el zone_id como ad_id
-                    "ad_url": ad_url
-                }
-            }
+        logger.info(f"Iniciando proceso de anuncio con zone ID: {ad_zone_id}")
         
-        except Exception as e:
-            logger.error(f"Error inesperado al iniciar el anuncio de Monetag: {str(e)}")
-            return {"success": False, "error": "Error inesperado"}
+        logger.info(f"BASE_URL: {MonetagAd.BASE_URL}")
+        ad_url = f"{MonetagAd.BASE_URL}?zone_id={ad_zone_id}"
+        logger.info(f"ad_url generada: {ad_url}")
+        
+        return {
+            "success": True, 
+            "ad_data": {
+                "ad_id": ad_zone_id,
+                "ad_url": ad_url
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Error inesperado al iniciar el anuncio de Monetag: {str(e)}")
+        logger.exception("Traceback completo:")
+        return {"success": False, "error": f"Error inesperado: {str(e)}"}
 
     @staticmethod
     async def verify_ad_view(ad_id: str) -> bool:
