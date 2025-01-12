@@ -10,6 +10,7 @@ from bot.config.ads_config import AD_CONFIG  # Importar la configuración de anu
 from telegram.ext import ConversationHandler
 from typing import Dict, Any
 
+# Your URL of the landing page
 FRONTEND_URL = "https://artvsmagnvs.github.io/WaterQuest.game/"
 
 logger = logging.getLogger(__name__)
@@ -44,25 +45,13 @@ async def initiate_ad() -> Dict[str, Any]:
     
     except Exception as e:
         logger.error(f"Error inesperado al iniciar el anuncio de Monetag: {str(e)}")
-        logger.exception("Traceback completo:")
+        logger.exception("Traceback completo: ")
         return {"success": False, "error": f"Error inesperado: {str(e)}"}
 
-    @staticmethod
-    async def verify_ad_view(ad_id: str) -> bool:
-        """
-        Verifica que un anuncio fue realmente visto.
-        
-        Args:
-            ad_id (str): El ID del anuncio a verificar.
-        
-        Returns:
-            bool: True si la visualización del anuncio es verificada, False en caso contrario.
-        """
-        # En este caso, confiamos en que el usuario ha visto el anuncio
-        # Ya que Monetag maneja la visualización en el lado del cliente
+@staticmethod
+async def verify_ad_view(ad_id: str) -> bool:
+        # We trust Monetag to handle verification
         return True
-
-
 
 
 async def ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -133,25 +122,31 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ad_url = ad_result["ad_url"]
         ad_id = ad_result["ad_id"]
 
+        # Direct link to the ad and processing reward
         await loading_message.edit_text(
-            f"📺 Please click the link below to view the ad:\n\n{ad_url}\n\nAfter viewing, click 'Ad Viewed' button.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Ad Viewed", callback_data=f"ad_viewed:{ad_id}")]
+            f"📺 Please click the link below to view the ad:\n\n{ad_url}",
+            reply_markup=InlineKeyboardMarkup([  # Optional back button
+                [InlineKeyboardButton("Back", callback_data="start")]
             ])
         )
 
-        # Esperar la confirmación del usuario
-        try:
-            query = await context.bot.wait_for_callback_query(
-                lambda q: q.from_user.id == update.effective_user.id and q.data.startswith("ad_viewed:"),
-                timeout=300
-            )
-        except asyncio.TimeoutError:
-            await loading_message.edit_text("❌ Timeout: Ad viewing not confirmed.")
-            return
+        # Directly verify after ad viewing without confirmation step
+        if await verify_ad_view(ad_id):
+            # Rewards processing
+            player["daily_ads"] += 1
+            await grant_ad_rewards(player)
+            await loading_message.edit_text("✅ Ad view confirmed. Processing rewards...")
+
+        else:
+            await loading_message.edit_text("❌ Ad view could not be verified. Please try again.")
+
+    except Exception as e:
+        logger.error(f"Error in process_ad_watch: {str(e)}")
+        await loading_message.edit_text("❌ An unexpected error occurred. Please try again later.")
+
 
         # Verificar la visualización del anuncio
-        viewed_ad_id = query.data.split(":")[1]
+        viewed_ad_id = update.callback_query.data.split(":")[1]
         if await verify_ad_view(viewed_ad_id):
             await loading_message.edit_text("✅ Ad view confirmed. Processing rewards...")
             
@@ -185,15 +180,6 @@ async def initiate_monetag_ad():
                 }
             else:
                 return {"success": False, "error": "Failed to initiate ad"}
-
-async def verify_ad_view(ad_id):
-    async with aiohttp.ClientSession() as session:
-        async with session.post(f"{FRONTEND_URL}/verify-ad", json={"ad_id": ad_id}) as response:
-            if response.status == 200:
-                data = await response.json()
-                return data["verified"]
-            else:
-                return False
 
 async def grant_ad_rewards(player):
     """Grants rewards for watching an ad."""

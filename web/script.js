@@ -24,4 +24,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+// Expose an ad trigger function globally
+function triggerAdSession() {
+    window.show_8766745()
+        .then(() => {
+            console.log("Ad session completed!");
+            // Optionally: Notify your server or Telegram bot
+        })
+        .catch((error) => {
+            console.error("Error during ad session:", error);
+        });
+}
 

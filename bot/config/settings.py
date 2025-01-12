@@ -241,7 +241,6 @@ def calculate_daily_rewards(reward_type: str, player_level: int, prestige_level:
             int(max_fragmento * prestige_multiplier)
         )
     }
-
 # Experience Settings
 def exp_needed_for_level(level):
     return int(100 * (1.5 ** level))
