@@ -28,7 +28,7 @@ IMAGE_PATHS = {
 
 # Game Constants
 MAX_BATTLES_PER_DAY = 20
-MIN_MINIBOSS_GOLD = 50
+MIN_MINIBOSS_GOLD = 1
 COMBAT_LEVEL_REQUIREMENT = 1
 PET_LEVEL_REQUIREMENT = 1
 MAX_COMBAT_LEVEL = 100
@@ -182,6 +182,7 @@ DAILY_REWARDS = {
         "comida": (30, 50),
         "energia": 100,
         "exp": (100, 250),
+        "fragmento del destino": 50
     },
     "streak_bonuses": {
         3: 1.5,    # 3 days streak = 1.5x rewards
