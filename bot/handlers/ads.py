@@ -132,7 +132,7 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         player["mascota"]["energia"] = min(
             player["mascota"]["energia"] + energy_reward,
-            player["mascota"]["energia_max"]
+            player["mascota"]["max_energy"]
         )
         player["combat_stats"]["battles_today"] += quick_combat_reward
         rewards_message.append(f"• +{energy_reward} Energía")
@@ -169,9 +169,16 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         logger.error(f"Error procesando la visualización del anuncio: {str(e)}")
-        await loading_message.edit_text(
-            "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
-        )
+        try:
+            await loading_message.edit_text(
+                "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
+            )
+        except Exception as edit_error:
+            logger.error(f"Error al editar el mensaje: {str(edit_error)}")
+            # Si no se puede editar el mensaje, enviamos uno nuevo
+            await update.callback_query.message.reply_text(
+                "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
+            )
 
 async def retry_combat_ad(update: Update, context: ContextTypes.DEFAULT_TYPE, combat_type: str):
     """Maneja el reintento de combate a través de la visualización de anuncios."""
