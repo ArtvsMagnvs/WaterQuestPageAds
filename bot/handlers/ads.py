@@ -98,7 +98,7 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Verificar si el jugador ha visto el máximo de anuncios hoy
-    daily_limit = AD_CONFIG.get('daily_limit', 100)  # Usar 0 como valor predeterminado si 'daily_limit' no está definido
+    daily_limit = AD_CONFIG.get('daily_limit', 100)
     if player.get("daily_ads", 0) >= daily_limit:
         await update.callback_query.message.reply_text(
             "❌ Has alcanzado el límite máximo de anuncios diarios."
@@ -130,29 +130,31 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         energy_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('energy', 0)
         quick_combat_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('quick_combat', 0)
         
-        player["mascota"]["energia"] = min(
-            player["mascota"]["energia"] + energy_reward,
-            player["mascota"]["max_energy"]
-        )
-        player["combat_stats"]["battles_today"] += quick_combat_reward
-        rewards_message.append(f"• +{energy_reward} Energía")
-        rewards_message.append(f"• +{quick_combat_reward} Combate Rápido")
+        # Actualizar energía de forma segura
+        if "mascota" in player:
+            current_energy = player["mascota"].get("energia", 0)
+            max_energy = player["mascota"].get("max_energy", 100)  # Default to 100 if not set
+            player["mascota"]["energia"] = min(current_energy + energy_reward, max_energy)
+            rewards_message.append(f"• +{energy_reward} Energía")
+
+        if "combat_stats" in player:
+            player["combat_stats"]["battles_today"] = player["combat_stats"].get("battles_today", 0) + quick_combat_reward
+            rewards_message.append(f"• +{quick_combat_reward} Combate Rápido")
         
         # Verificar recompensas por hitos
         if daily_ads == 3:
-            player["miniboss_stats"]["attempts_today"] += 1
+            player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 1
             rewards_message.append("• +1 intento de MiniBoss (hito 3 anuncios)")
 
         elif daily_ads == 5:
-            player["miniboss_stats"]["attempts_today"] += 2
-            # Aumentar generación de oro en un 1%
-            current_gold = player["mascota"]["oro_hora"]
-            player["mascota"]["oro_hora"] = current_gold * 1.01
+            player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 2
+            if "mascota" in player and "oro_hora" in player["mascota"]:
+                player["mascota"]["oro_hora"] *= 1.01
             rewards_message.append("• +2 intentos de MiniBoss")
             rewards_message.append("• +1% Generación de Oro (hito 5 anuncios)")
 
         elif daily_ads == 10:
-            player["miniboss_stats"]["attempts_today"] += 3
+            player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 3
             player["lucky_tickets"] = player.get("lucky_tickets", 0) + 1
             rewards_message.append("• +3 intentos de MiniBoss")
             rewards_message.append("• +1 Fragmento de Destino (hito 10 anuncios)")
