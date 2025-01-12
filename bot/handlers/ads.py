@@ -117,70 +117,78 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await loading_message.edit_text("❌ Error al cargar el anuncio. Por favor, intenta nuevamente.")
             return
 
-        await loading_message.delete()
-        
-        # Actualizar el conteo de anuncios diarios
-        daily_ads = player.get("daily_ads", 0) + 1
-        player["daily_ads"] = daily_ads
-        
-        # Inicializar el seguimiento de recompensas
-        rewards_message = ["✅ Recompensas obtenidas:"]
-        
-        # Recompensas base por ver el anuncio
-        energy_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('energy', 0)
-        quick_combat_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('quick_combat', 0)
-        
-        # Actualizar energía de forma segura
-        if "mascota" in player:
-            current_energy = player["mascota"].get("energia", 0)
-            max_energy = player["mascota"].get("max_energy", 100)  # Default to 100 if not set
-            player["mascota"]["energia"] = min(current_energy + energy_reward, max_energy)
-            rewards_message.append(f"• +{energy_reward} Energía")
+        # Esperar confirmación del usuario de que ha visto el anuncio
+        await loading_message.edit_text("¿Has visto el anuncio completo?", 
+                                        reply_markup=InlineKeyboardMarkup([
+                                            [InlineKeyboardButton("Sí, lo he visto", callback_data="ad_watched")],
+                                            [InlineKeyboardButton("No, hubo un problema", callback_data="ad_not_watched")]
+                                        ]))
 
-        if "combat_stats" in player:
-            player["combat_stats"]["battles_today"] = player["combat_stats"].get("battles_today", 0) + quick_combat_reward
-            rewards_message.append(f"• +{quick_combat_reward} Combate Rápido")
-        
-        # Verificar recompensas por hitos
-        if daily_ads == 3:
-            player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 1
-            rewards_message.append("• +1 intento de MiniBoss (hito 3 anuncios)")
+        # Esperar la respuesta del usuario
+        response = await context.bot.wait_for_callback_query(update.effective_user.id, timeout=60)
 
-        elif daily_ads == 5:
-            player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 2
-            if "mascota" in player and "oro_hora" in player["mascota"]:
-                player["mascota"]["oro_hora"] *= 1.01
-            rewards_message.append("• +2 intentos de MiniBoss")
-            rewards_message.append("• +1% Generación de Oro (hito 5 anuncios)")
+        if response.data == "ad_watched":
+            await loading_message.delete()
+            
+            # Actualizar el conteo de anuncios diarios
+            daily_ads = player.get("daily_ads", 0) + 1
+            player["daily_ads"] = daily_ads
+            
+            # Inicializar el seguimiento de recompensas
+            rewards_message = ["✅ Recompensas obtenidas:"]
+            
+            # Recompensas base por ver el anuncio
+            energy_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('energy', 0)
+            quick_combat_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('quick_combat', 0)
+            
+            # Actualizar energía de forma segura
+            if "mascota" in player:
+                current_energy = player["mascota"].get("energia", 0)
+                max_energy = player["mascota"].get("max_energy", 100)  # Default to 100 if not set
+                player["mascota"]["energia"] = min(current_energy + energy_reward, max_energy)
+                rewards_message.append(f"• +{energy_reward} Energía")
 
-        elif daily_ads == 10:
-            player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 3
-            player["lucky_tickets"] = player.get("lucky_tickets", 0) + 1
-            rewards_message.append("• +3 intentos de MiniBoss")
-            rewards_message.append("• +1 Fragmento de Destino (hito 10 anuncios)")
-        
-        # Guardar los datos del jugador
-        context.bot_data['players'][user_id] = player
-        
-        await update.callback_query.message.reply_text(
-            "\n".join(rewards_message)
-        )
-        
-        # Regresar al menú de anuncios
-        await ads_menu(update, context)
-        
+            if "combat_stats" in player:
+                player["combat_stats"]["battles_today"] = player["combat_stats"].get("battles_today", 0) + quick_combat_reward
+                rewards_message.append(f"• +{quick_combat_reward} Combate Rápido")
+            
+            # Verificar recompensas por hitos
+            if daily_ads == 3:
+                player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 1
+                rewards_message.append("• +1 intento de MiniBoss (hito 3 anuncios)")
+
+            elif daily_ads == 5:
+                player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 2
+                if "mascota" in player and "oro_hora" in player["mascota"]:
+                    player["mascota"]["oro_hora"] *= 1.01
+                rewards_message.append("• +2 intentos de MiniBoss")
+                rewards_message.append("• +1% Generación de Oro (hito 5 anuncios)")
+
+            elif daily_ads == 10:
+                player.setdefault("miniboss_stats", {})["attempts_today"] = player["miniboss_stats"].get("attempts_today", 0) + 3
+                player["lucky_tickets"] = player.get("lucky_tickets", 0) + 1
+                rewards_message.append("• +3 intentos de MiniBoss")
+                rewards_message.append("• +1 Fragmento de Destino (hito 10 anuncios)")
+            
+            # Guardar los datos del jugador
+            context.bot_data['players'][user_id] = player
+            
+            await update.callback_query.message.reply_text(
+                "\n".join(rewards_message)
+            )
+            
+            # Regresar al menú de anuncios
+            await ads_menu(update, context)
+        else:
+            await loading_message.edit_text("❌ No se ha confirmado la visualización del anuncio. No se han otorgado recompensas.")
+
+    except asyncio.TimeoutError:
+        await loading_message.edit_text("❌ Tiempo de espera agotado. Por favor, intenta nuevamente.")
     except Exception as e:
         logger.error(f"Error procesando la visualización del anuncio: {str(e)}")
-        try:
-            await loading_message.edit_text(
-                "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
-            )
-        except Exception as edit_error:
-            logger.error(f"Error al editar el mensaje: {str(edit_error)}")
-            # Si no se puede editar el mensaje, enviamos uno nuevo
-            await update.callback_query.message.reply_text(
-                "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
-            )
+        await loading_message.edit_text(
+            "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
+        )
 
 async def retry_combat_ad(update: Update, context: ContextTypes.DEFAULT_TYPE, combat_type: str):
     """Maneja el reintento de combate a través de la visualización de anuncios."""
