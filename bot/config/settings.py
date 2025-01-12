@@ -174,7 +174,8 @@ DAILY_REWARDS = {
         "coral": (1, 3),
         "comida": (10, 20),
         "energia": 100,
-        "exp": (50, 100)
+        "exp": (50, 100),
+        "fragmento del destino": (100, 250)
     },
     "premium": {
         "oro": (500, 2000),
@@ -182,7 +183,7 @@ DAILY_REWARDS = {
         "comida": (30, 50),
         "energia": 100,
         "exp": (100, 250),
-        "fragmento del destino": 50
+        
     },
     "streak_bonuses": {
         3: 1.5,    # 3 days streak = 1.5x rewards
