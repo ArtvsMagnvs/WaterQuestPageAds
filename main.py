@@ -50,7 +50,7 @@ from bot.handlers import (
     miniboss_handler, siguiente_miniboss, retirarse_miniboss, 
     claim_daily_reward, check_daily_reset, check_weekly_tickets,
     tienda, comprar,
-    check_premium_expiry,
+    check_premium_expiry, 
     portal_menu, spin_portal
 )
 
@@ -194,6 +194,8 @@ async def button(update: Update, context: CallbackContext):
         elif query.data.startswith("retry_miniboss_"):
             combat_type = query.data.split("_")[3]  # Extraer el tipo de combate
             await retry_combat_ad(update, context, combat_type)
+        elif query.data == "premium_shop":
+            await premium_shop(update, context)
         else:
             logger.warning(f"Unhandled callback_data: {query.data}")
             await query.message.reply_text(

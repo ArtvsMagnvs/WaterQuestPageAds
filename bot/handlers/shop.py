@@ -5,13 +5,19 @@ from telegram.ext import ContextTypes
 import logging
 
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
-from bot.config.shop_items import SHOP_ITEMS, ShopManager
+from bot.config.shop_items import SHOP_ITEMS, PREMIUM_SHOP_ITEMS, ShopManager
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
 
 #---------------------------------------------------------------
 # Temporarily comment out TON SDK imports
+
+from bot.config.ton_config import TON_CONFIG
+
+ton_utils = TONUtils()
+transaction_verifier = TransactionVerifier()
+
 class TonClientException(Exception):
     pass
 TonClientError = TonClientException
@@ -215,3 +221,130 @@ async def comprar(update: Update, context: ContextTypes.DEFAULT_TYPE, item_name:
                 ERROR_MESSAGES["generic_error"],
                 reply_markup=generar_botones()
             )
+
+async def premium_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Display the premium shop menu with TON prices."""
+    try:
+        user_id = update.effective_user.id
+        if user_id not in context.bot_data.get('players', {}):
+            await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+            return
+
+        player = context.bot_data['players'][user_id]
+
+        header_message = (
+            "🌟 Tienda Premium 🌟\n\n"
+            "Aquí puedes comprar artículos y mejoras especiales con TON.\n"
+            "1 TON = 1,000,000,000 nanoTON\n\n"
+        )
+
+        keyboard = []
+        for item_name, item_data in PREMIUM_SHOP_ITEMS.items():
+            item_info = ShopManager.format_premium_item_info(item_data)
+            header_message += f"{item_info}\n\n"
+            
+            button = InlineKeyboardButton(
+                f"Comprar {item_data['emoji']} {item_name} ({item_data['price']} TON)",
+                callback_data=f"buy_premium_{item_name}"
+            )
+            keyboard.append([button])
+
+        keyboard.append([InlineKeyboardButton("🏪 Tienda Normal", callback_data="tienda")])
+        keyboard.append([InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")])
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        if update.callback_query:
+            await update.callback_query.message.edit_text(
+                text=header_message,
+                reply_markup=reply_markup
+            )
+        else:
+            await update.message.reply_text(
+                text=header_message,
+                reply_markup=reply_markup
+            )
+
+    except Exception as e:
+        logger.error(f"Error in premium_shop: {e}")
+        await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
+
+async def buy_premium_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle premium item purchases using TON."""
+    try:
+        query = update.callback_query
+        user_id = query.from_user.id
+        item_name = query.data.split('_')[2]
+
+        player = context.bot_data['players'].get(user_id)
+        if not player:
+            await query.message.reply_text(ERROR_MESSAGES["no_game"])
+            return
+
+        item = PREMIUM_SHOP_ITEMS.get(item_name)
+        if not item:
+            await query.message.reply_text("Item not found in premium shop.")
+            return
+
+        # Generate a unique payment address for this transaction
+        payment_address = await ton_utils.generate_payment_address(user_id, item_name)
+
+        # Create a payment link
+        payment_amount = item['price'] * 1_000_000_000  # Convert TON to nanoTON
+        payment_link = f"ton://transfer/{payment_address}?amount={payment_amount}"
+
+        # Send payment instructions to the user
+        payment_message = (
+            f"Para comprar {item['emoji']} {item_name}, por favor sigue estos pasos:\n\n"
+            f"1. Haz clic en este enlace para abrir tu billetera TON: {payment_link}\n"
+            f"2. Confirma el pago de {item['price']} TON\n"
+            "3. Una vez realizado el pago, haz clic en 'Verificar Pago'\n\n"
+            "El artículo se añadirá a tu cuenta una vez que se confirme el pago."
+        )
+
+        verify_button = InlineKeyboardButton("Verificar Pago", callback_data=f"verify_payment_{item_name}")
+        cancel_button = InlineKeyboardButton("Cancelar", callback_data="premium_shop")
+        reply_markup = InlineKeyboardMarkup([[verify_button], [cancel_button]])
+
+        await query.message.reply_text(payment_message, reply_markup=reply_markup)
+
+    except Exception as e:
+        logger.error(f"Error in buy_premium_item: {e}")
+        await query.message.reply_text(ERROR_MESSAGES["generic_error"])
+
+async def verify_premium_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Verify the payment for a premium item."""
+    try:
+        query = update.callback_query
+        user_id = query.from_user.id
+        item_name = query.data.split('_')[2]
+
+        player = context.bot_data['players'].get(user_id)
+        if not player:
+            await query.message.reply_text(ERROR_MESSAGES["no_game"])
+            return
+
+        item = PREMIUM_SHOP_ITEMS.get(item_name)
+        if not item:
+            await query.message.reply_text("Item not found in premium shop.")
+            return
+
+        # Verify the transaction
+        payment_address = await ton_utils.get_payment_address(user_id, item_name)
+        expected_amount = item['price'] * 1_000_000_000  # Convert TON to nanoTON
+        is_paid = await transaction_verifier.verify_payment(payment_address, expected_amount)
+
+        if is_paid:
+            # Update player's premium features
+            if 'premium_features' not in player:
+                player['premium_features'] = {}
+            player['premium_features'][item_name] = True
+            save_game_data(context.bot_data['players'])
+
+            await query.message.reply_text(f"✅ Pago confirmado. Has adquirido {item['emoji']} {item_name}!")
+        else:
+            await query.message.reply_text("❌ No se ha detectado el pago. Por favor, intenta de nuevo más tarde o contacta con soporte si crees que es un error.")
+
+    except Exception as e:
+        logger.error(f"Error in verify_premium_payment: {e}")
+        await query.message.reply_text(ERROR_MESSAGES["generic_error"])
