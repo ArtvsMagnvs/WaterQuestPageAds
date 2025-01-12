@@ -98,7 +98,7 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Verificar si el jugador ha visto el máximo de anuncios hoy
-    daily_limit = AD_CONFIG.get('daily_limit', 0)  # Usar 0 como valor predeterminado si 'daily_limit' no está definido
+    daily_limit = AD_CONFIG.get('daily_limit', 100)  # Usar 0 como valor predeterminado si 'daily_limit' no está definido
     if player.get("daily_ads", 0) >= daily_limit:
         await update.callback_query.message.reply_text(
             "❌ Has alcanzado el límite máximo de anuncios diarios."
