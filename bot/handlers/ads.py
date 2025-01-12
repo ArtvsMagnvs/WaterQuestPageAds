@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class MonetagAd:
     BASE_URL = "https://artvsmagnvs.github.io/WaterQuest.game/"  # URL de tu página web
 
-    @staticmethod
+@staticmethod
 async def initiate_ad() -> Dict[str, Any]:
     try:
         logger.info("Iniciando función initiate_ad")
