@@ -13,7 +13,7 @@ import asyncio
 from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
-from bot.handlers.shop import premium_shop
+from bot.handlers.shop import premium_shop, get_premium_item
 
 # Import configurations and save system
 from bot.config.settings import (
@@ -381,6 +381,9 @@ def main():
         
         # Add error handler
         application.add_error_handler(error_handler)
+
+        # Add premmium items
+        application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
 
         # Add periodic jobs
         application.job_queue.run_repeating(

@@ -373,9 +373,10 @@ async def premium_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for item_name, item_data in PREMIUM_SHOP_ITEMS.items():
-            emoji = item_data.get('emoji', '🎁')  # Default emoji if not present
+            emoji = item_data.get('emoji', '🎁')
+            display_name = item_data.get('display_name', item_name)
             button = InlineKeyboardButton(
-                f"Obtener {emoji} {item_name}",
+                f"Obtener {emoji} {display_name}",
                 callback_data=f"get_premium_{item_name}"
             )
             keyboard.append([button])
@@ -401,7 +402,6 @@ async def premium_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
 
 async def get_premium_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle free premium item acquisition for testing."""
     try:
         query = update.callback_query
         user_id = query.from_user.id
@@ -423,7 +423,8 @@ async def get_premium_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
         player['premium_features'][item_name] = True
         save_game_data(context.bot_data['players'])
 
-        await query.message.reply_text(f"✅ Has obtenido {item['emoji']} {item_name} de forma gratuita para pruebas!")
+        display_name = item.get('display_name', item_name)
+        await query.message.reply_text(f"✅ Has obtenido {item['emoji']} {display_name} de forma gratuita para pruebas!")
 
     except Exception as e:
         logger.error(f"Error in get_premium_item: {e}")

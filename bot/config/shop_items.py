@@ -75,23 +75,23 @@ PREMIUM_SHOP_ITEMS = {
         "duration": 30 * 24 * 60 * 60,  # 30 days in seconds
         "type": "subscription"
     },
-    "lucky_ticket_1": {
+    "fragmento_de_destino_1": {
         "name": "🎫 1 Fragmento de Destino",
-        "description": "1 Ticket de la suerte para el Portal de las Mareas",
+        "description": "1 Fragmento de Destino para el Portal de las Mareas",
         "price": 0.25,  # 0.25 USDT in TON
         "amount": 1,
         "type": "consumable"
     },
-    "lucky_ticket_5": {
+    "fragmento_de_destino_5": {
         "name": "🎫 5 Fragmentos de Destino",
-        "description": "5 Tickets de la suerte para el Portal de las Mareas",
+        "description": "5 Fragmentos de Destino para el Portal de las Mareas",
         "price": 1.0,  # 1 USDT in TON
         "amount": 5,
         "type": "consumable"
     },
-    "lucky_ticket_10": {
+    "fragmento_de_destino_10": {
         "name": "🎫 10 Fragmentos de Destino",
-        "description": "10 Tickets de la suerte para el Portal de las Mareas",
+        "description": "10 Fragmentos de Destino para el Portal de las Mareas",
         "price": 1.5,  # 1.5 USDT in TON
         "amount": 10,
         "type": "consumable"
