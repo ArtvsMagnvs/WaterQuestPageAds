@@ -98,7 +98,8 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Verificar si el jugador ha visto el máximo de anuncios hoy
-    if player.get("daily_ads", 0) >= AD_CONFIG['daily_limit']:
+    daily_limit = AD_CONFIG.get('daily_limit', 0)  # Usar 0 como valor predeterminado si 'daily_limit' no está definido
+    if player.get("daily_ads", 0) >= daily_limit:
         await update.callback_query.message.reply_text(
             "❌ Has alcanzado el límite máximo de anuncios diarios."
         )
@@ -126,13 +127,16 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
         rewards_message = ["✅ Recompensas obtenidas:"]
         
         # Recompensas base por ver el anuncio
+        energy_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('energy', 0)
+        quick_combat_reward = AD_CONFIG.get('ad_rewards', {}).get('watch', {}).get('quick_combat', 0)
+        
         player["mascota"]["energia"] = min(
-            player["mascota"]["energia"] + AD_CONFIG['ad_rewards']['watch']['energy'],
+            player["mascota"]["energia"] + energy_reward,
             player["mascota"]["energia_max"]
         )
-        player["combat_stats"]["battles_today"] += 1
-        rewards_message.append(f"• +{AD_CONFIG['ad_rewards']['watch']['energy']} Energía")
-        rewards_message.append(f"• +{AD_CONFIG['ad_rewards']['watch']['quick_combat']} Combate Rápido")
+        player["combat_stats"]["battles_today"] += quick_combat_reward
+        rewards_message.append(f"• +{energy_reward} Energía")
+        rewards_message.append(f"• +{quick_combat_reward} Combate Rápido")
         
         # Verificar recompensas por hitos
         if daily_ads == 3:
