@@ -13,6 +13,7 @@ import asyncio
 from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
+from bot.handlers.shop import premium_shop
 
 # Import configurations and save system
 from bot.config.settings import (
