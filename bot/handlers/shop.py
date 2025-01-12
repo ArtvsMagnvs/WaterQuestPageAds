@@ -373,8 +373,9 @@ async def premium_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for item_name, item_data in PREMIUM_SHOP_ITEMS.items():
+            emoji = item_data.get('emoji', '🎁')  # Default emoji if not present
             button = InlineKeyboardButton(
-                f"Obtener {item_data['emoji']} {item_name}",
+                f"Obtener {emoji} {item_name}",
                 callback_data=f"get_premium_{item_name}"
             )
             keyboard.append([button])
