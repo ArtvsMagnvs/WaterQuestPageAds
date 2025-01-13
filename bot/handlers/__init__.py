@@ -14,7 +14,7 @@ from .miniboss import (
     retirarse_miniboss
 )
 from .daily import claim_daily_reward, check_daily_reset
-from .shop import tienda, comprar  # Removed premium_shop and handle_premium_purchase
+from .shop import tienda, comprar, comprar_fragmentos  # Removed premium_shop and handle_premium_purchase
 from .pet import (
     recolectar, 
     alimentar, 
