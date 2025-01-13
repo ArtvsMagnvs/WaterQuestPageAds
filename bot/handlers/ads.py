@@ -9,6 +9,7 @@ from telegram.ext import CallbackQueryHandler
 from bot.config.ads_config import AD_CONFIG  # Importar la configuración de anuncios
 from telegram.ext import ConversationHandler
 from typing import Dict, Any
+from database.db.game_db import get_player, Session
 
 # Your URL of the landing page
 FRONTEND_URL = "https://artvsmagnvs.github.io/WaterQuest.game/"
@@ -54,96 +55,106 @@ async def verify_ad_view(ad_id: str) -> bool:
         return True
 
 
+from database.db.game_db import get_player, Session
+
 async def ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra el menú de anuncios con el progreso actual."""
     user_id = update.callback_query.from_user.id
-    player = context.bot_data['players'].get(user_id)
     
-    if not player:
-        await update.callback_query.message.reply_text("❌ Error: Jugador no encontrado.")
-        return
-    
-    # Obtener el conteo de anuncios diarios y asegurarse de que exista
-    if "daily_ads" not in player:
-        player["daily_ads"] = 0
-    daily_ads = player["daily_ads"]
-    
-    keyboard = [
-        [InlineKeyboardButton("📺 Ver Anuncio", callback_data="watch_ad")],
-        [InlineKeyboardButton("🏠 Volver", callback_data="start")]
-    ]
-    
-    message = (
-        "📺 *Recompensas por Anuncios Diarios*\n\n"
-        f"Anuncios vistos hoy: {daily_ads}/10\n\n"
-        "Recompensas actuales:\n"
-        "• Ver Anuncio: +25 Energía, +1 Combate Rápido\n"
-        f"• 3 Anuncios Diarios: +1 MiniBoss {'✅' if daily_ads >= 3 else '❌'}\n"
-        f"• 5 Anuncios Diarios: +2 MiniBoss, +1% Generación de Oro {('✅' if daily_ads >= 5 else '❌')}\n"
-        f"• 10 Anuncios Diarios: +3 MiniBoss, +1 Fragmento de Destino {('✅' if daily_ads >= 10 else '❌')}\n\n"
-        "Características Especiales:\n"
-        "• Reintentar combate MiniBoss (1 Anuncio)\n"
-        "• Reintentar combate Aventura (1 Anuncio)"
-    )
-    
-    await update.callback_query.message.edit_text(
-        message,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode='Markdown'
-    )
+    session = Session()
+    try:
+        player = get_player(session, user_id)
+        
+        if not player:
+            await update.callback_query.message.reply_text("❌ Error: Jugador no encontrado.")
+            return
+        
+        # Obtener el conteo de anuncios diarios y asegurarse de que exista
+        daily_ads = player.daily_ads if player.daily_ads is not None else 0
+        
+        keyboard = [
+            [InlineKeyboardButton("📺 Ver Anuncio", callback_data="watch_ad")],
+            [InlineKeyboardButton("🏠 Volver", callback_data="start")]
+        ]
+        
+        message = (
+            "📺 *Recompensas por Anuncios Diarios*\n\n"
+            f"Anuncios vistos hoy: {daily_ads}/10\n\n"
+            "Recompensas actuales:\n"
+            "• Ver Anuncio: +25 Energía, +1 Combate Rápido\n"
+            f"• 3 Anuncios Diarios: +1 MiniBoss {'✅' if daily_ads >= 3 else '❌'}\n"
+            f"• 5 Anuncios Diarios: +2 MiniBoss, +1% Generación de Oro {('✅' if daily_ads >= 5 else '❌')}\n"
+            f"• 10 Anuncios Diarios: +3 MiniBoss, +1 Fragmento de Destino {('✅' if daily_ads >= 10 else '❌')}\n\n"
+            "Características Especiales:\n"
+            "• Reintentar combate MiniBoss (1 Anuncio)\n"
+            "• Reintentar combate Aventura (1 Anuncio)"
+        )
+        
+        await update.callback_query.message.edit_text(
+            message,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='Markdown'
+        )
+    finally:
+        session.close()
+
+from database.db.game_db import get_player, update_player, Session
 
 async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.callback_query.from_user.id
-    player = context.bot_data['players'].get(user_id)
     
-    if not player:
-        await update.callback_query.message.reply_text("❌ Error: Player not found.")
-        return
-
-    daily_limit = AD_CONFIG.get('daily_limit', 100)
-    if player.get("daily_ads", 0) >= daily_limit:
-        await update.callback_query.message.reply_text(
-            "❌ You've reached the maximum daily ad limit."
-        )
-        return
-
-    loading_message = await update.callback_query.message.reply_text(
-        "📺 Initiating ad..."
-    )
-    
+    session = Session()
     try:
-        # Iniciar el anuncio de Monetag
-        ad_result = await initiate_monetag_ad()
+        player = get_player(session, user_id)
         
-        if not ad_result["success"]:
-            await loading_message.edit_text(f"❌ Error loading the ad: {ad_result['error']}")
+        if not player:
+            await update.callback_query.message.reply_text("❌ Error: Player not found.")
             return
 
-        ad_url = ad_result["ad_url"]
-        ad_id = ad_result["ad_id"]
+        daily_limit = AD_CONFIG.get('daily_limit', 100)
+        if player.daily_ads >= daily_limit:
+            await update.callback_query.message.reply_text(
+                "❌ You've reached the maximum daily ad limit."
+            )
+            return
 
-        # Direct link to the ad and processing reward
-        await loading_message.edit_text(
-            f"📺 Please click the link below to view the ad:\n\n{ad_url}",
-            reply_markup=InlineKeyboardMarkup([  # Optional back button
-                [InlineKeyboardButton("Back", callback_data="start")]
-            ])
+        loading_message = await update.callback_query.message.reply_text(
+            "📺 Initiating ad..."
         )
+        
+        try:
+            # Iniciar el anuncio de Monetag
+            ad_result = await initiate_monetag_ad()
+            
+            if not ad_result["success"]:
+                await loading_message.edit_text(f"❌ Error loading the ad: {ad_result['error']}")
+                return
 
-        # Directly verify after ad viewing without confirmation step
-        if await verify_ad_view(ad_id):
-            # Rewards processing
-            player["daily_ads"] += 1
-            await grant_ad_rewards(player)
-            await loading_message.edit_text("✅ Ad view confirmed. Processing rewards...")
+            ad_url = ad_result["ad_url"]
+            ad_id = ad_result["ad_id"]
 
-        else:
-            await loading_message.edit_text("❌ Ad view could not be verified. Please try again.")
+            # Direct link to the ad and processing reward
+            await loading_message.edit_text(
+                f"📺 Please click the link below to view the ad:\n\n{ad_url}",
+                reply_markup=InlineKeyboardMarkup([  # Optional back button
+                    [InlineKeyboardButton("Back", callback_data="start")]
+                ])
+            )
 
-    except Exception as e:
-        logger.error(f"Error in process_ad_watch: {str(e)}")
-        await loading_message.edit_text("❌ An unexpected error occurred. Please try again later.")
+            # Directly verify after ad viewing without confirmation step
+            if await verify_ad_view(ad_id):
+                # Rewards processing
+                player.daily_ads += 1
+                await grant_ad_rewards(player)
+                update_player(session, player)
+                await loading_message.edit_text("✅ Ad view confirmed. Processing rewards...")
 
+            else:
+                await loading_message.edit_text("❌ Ad view could not be verified. Please try again.")
+
+        except Exception as e:
+            logger.error(f"Error in process_ad_watch: {str(e)}")
+            await loading_message.edit_text("❌ An unexpected error occurred. Please try again later.")
 
         # Verificar la visualización del anuncio
         viewed_ad_id = update.callback_query.data.split(":")[1]
@@ -151,7 +162,7 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await loading_message.edit_text("✅ Ad view confirmed. Processing rewards...")
             
             # Actualizar el conteo diario de anuncios
-            player["daily_ads"] = player.get("daily_ads", 0) + 1
+            player.daily_ads += 1
             
             # Otorgar recompensas
             rewards = await grant_ad_rewards(player)
@@ -161,12 +172,16 @@ async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Verificar hitos
             await check_ad_milestones(update, context, player)
+            
+            update_player(session, player)
         else:
             await loading_message.edit_text("❌ Ad view could not be verified. Please try again.")
 
     except Exception as e:
         logger.error(f"Error in process_ad_watch: {str(e)}")
         await loading_message.edit_text("❌ An unexpected error occurred. Please try again later.")
+    finally:
+        session.close()
 
 async def initiate_monetag_ad():
     async with aiohttp.ClientSession() as session:
@@ -233,44 +248,48 @@ async def check_ad_milestones(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def retry_combat_ad(update: Update, context: ContextTypes.DEFAULT_TYPE, combat_type: str):
     """Maneja el reintento de combate a través de la visualización de anuncios."""
     user_id = update.callback_query.from_user.id
-    player = context.bot_data['players'].get(user_id)
     
-    if not player:
-        await update.callback_query.message.reply_text("❌ Error: Jugador no encontrado.")
-        return False
-
-    loading_message = await update.callback_query.message.reply_text(
-        "📺 Cargando anuncio para reintentar combate..."
-    )
-        
+    session = Session()
     try:
-        # Mostrar anuncio de Monetag a través de la solicitud al frontend
-        ad_result = await MonetagAd.show_ad()
-        
-        if not ad_result:
-            await loading_message.edit_text("❌ Error al cargar el anuncio. Por favor, intenta nuevamente.")
+        player = get_player(session, user_id)
+        if not player:
+            await update.callback_query.message.reply_text("❌ Error: Jugador no encontrado.")
             return False
 
-        await loading_message.delete()
-        
-        # Actualizar el conteo de anuncios diarios
-        player["daily_ads"] = player.get("daily_ads", 0) + 1
-        
-        # Guardar los datos del jugador
-        context.bot_data['players'][user_id] = player
-        
-        await update.callback_query.message.reply_text(
-            f"✅ ¡Ahora puedes reintentar el combate de {combat_type}!"
+        loading_message = await update.callback_query.message.reply_text(
+            "📺 Cargando anuncio para reintentar combate..."
         )
         
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error procesando el reintento del anuncio: {str(e)}")
-        await loading_message.edit_text(
-            "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
-        )
-        return False
+        try:
+            # Mostrar anuncio de Monetag a través de la solicitud al frontend
+            ad_result = await MonetagAd.show_ad()
+            
+            if not ad_result:
+                await loading_message.edit_text("❌ Error al cargar el anuncio. Por favor, intenta nuevamente.")
+                return False
+
+            await loading_message.delete()
+            
+            # Actualizar el conteo de anuncios diarios
+            player.daily_ads = player.daily_ads + 1 if player.daily_ads else 1
+            
+            # Guardar los datos del jugador
+            save_player(session, player)
+            
+            await update.callback_query.message.reply_text(
+                f"✅ ¡Ahora puedes reintentar el combate de {combat_type}!"
+            )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error procesando el reintento del anuncio: {str(e)}")
+            await loading_message.edit_text(
+                "❌ Error procesando el anuncio. Por favor, intenta nuevamente."
+            )
+            return False
+    finally:
+        session.close()
 
 def register_handlers(application):
     """Registrar todos los controladores relacionados con los anuncios."""

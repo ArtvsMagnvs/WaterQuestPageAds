@@ -1,241 +1,136 @@
-# utils/save_system.py
-
-import json
-import logging
-from pathlib import Path
+from database.models.player_model import Player
+from database.db.game_db import Session, get_player, save_player, create_player, get_all_players
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
-import shutil
-from typing import Dict, Optional
+import json
+import os
+import logging
 
-# Constants
-SAVE_FILE = 'game_data.json'
-BACKUP_DIR = 'backups'
-MAX_BACKUPS = 5
-
-# Configure logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Configure logger
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def save_game_data(data: Dict) -> bool:
+def save_game_data(data: dict[int, dict]) -> bool:
     """
-    Save game data to file with backup creation.
+    Save game data to the database.
     
     Args:
-        data: Dictionary with game data to save
+        data: Dictionary with game data to save, keyed by user_id
     
     Returns:
         bool: True if save successful, False otherwise
     """
     try:
-        # Create backup directory if it doesn't exist
-        Path(BACKUP_DIR).mkdir(exist_ok=True)
+        session = Session()
+        for user_id, player_data in data.items():
+            player = session.query(Player).filter(Player.id == user_id).first()
+            if player:
+                # Update existing player
+                for key, value in player_data.items():
+                    setattr(player, key, value)
+            else:
+                # Create new player
+                new_player = Player(**player_data)
+                session.add(new_player)
         
-        # Create backup if save file exists
-        if Path(SAVE_FILE).exists():
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_name = f'game_data_backup_{timestamp}.json'
-            backup_path = Path(BACKUP_DIR) / backup_name
-            shutil.copy2(SAVE_FILE, backup_path)
-            
-            # Clean up old backups if there are too many
-            backup_files = sorted(Path(BACKUP_DIR).glob('game_data_backup_*.json'))
-            while len(backup_files) > MAX_BACKUPS:
-                backup_files[0].unlink()  # Delete oldest backup
-                backup_files = backup_files[1:]
-        
-        # Validate data before saving
-        if not validate_save_data(data):
-            logger.error("Invalid data structure, save aborted")
-            return False
-
-        # Save new data with pretty formatting
-        with open(SAVE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            
-        logger.info("Game data saved successfully")
+        session.commit()
+        logger.info("Game data saved successfully to database")
         return True
-        
+    except SQLAlchemyError as e:
+        logger.error(f"Database error saving game data: {e}")
+        session.rollback()
+        return False
     except Exception as e:
         logger.error(f"Error saving game data: {e}")
         return False
+    finally:
+        session.close()
 
-def load_game_data() -> Dict:
+def load_game_data() -> dict[int, dict]:
     """
-    Load game data from file with backup recovery.
+    Load game data from the database.
     
     Returns:
-        dict: Loaded game data or empty dict if no save exists
+        dict: Loaded game data keyed by user_id
     """
     try:
-        save_path = Path(SAVE_FILE)
-        if not save_path.exists():
-            logger.info("No save file found, starting fresh")
-            return {}
-            
-        # Try to load main save file
-        try:
-            with open(save_path, 'r', encoding='utf-8') as f:
-                loaded_data = json.load(f)
-                if validate_save_data(loaded_data):
-                    logger.info("Game data loaded successfully")
-                    return loaded_data
-                else:
-                    logger.error("Invalid save file structure, attempting backup")
-                    return load_from_backup()
-                
-        except json.JSONDecodeError:
-            logger.error("Corrupted save file, attempting backup")
-            return load_from_backup()
-            
+        players = get_all_players()
+        
+        game_data = {player.id: player.to_dict() for player in players}
+        
+        logger.info("Game data loaded successfully from database")
+        return game_data
+    except SQLAlchemyError as e:
+        logger.error(f"Database error loading game data: {e}")
+        return {}
     except Exception as e:
         logger.error(f"Error loading game data: {e}")
         return {}
 
-def load_from_backup() -> Dict:
+def backup_data():
     """
-    Attempt to load data from most recent valid backup.
+    Create a backup of all player data.
+    """
+    players = get_all_players()
+    backup_data = [player.to_dict() for player in players]
     
-    Returns:
-        dict: Loaded backup data or empty dict if all backups fail
-    """
-    try:
-        # Get all backup files, sorted by date (newest first)
-        backup_files = sorted(
-            Path(BACKUP_DIR).glob('game_data_backup_*.json'),
-            reverse=True
-        )
-        
-        for backup_file in backup_files:
-            try:
-                with open(backup_file, 'r', encoding='utf-8') as f:
-                    loaded_data = json.load(f)
-                    if validate_save_data(loaded_data):
-                        logger.info(f"Successfully loaded backup: {backup_file.name}")
-                        
-                        # Restore the backup as the main save
-                        shutil.copy2(backup_file, SAVE_FILE)
-                        return loaded_data
-            except:
-                continue
-                
-        # If all backups fail, start fresh
-        logger.error("All backups corrupted, starting fresh")
-        return {}
-        
-    except Exception as e:
-        logger.error(f"Error loading from backup: {e}")
-        return {}
+    backup_dir = 'backups'
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = os.path.join(backup_dir, f'game_data_backup_{timestamp}.json')
+    
+    with open(backup_file, 'w') as f:
+        json.dump(backup_data, f, indent=2)
+    
+    logger.info(f"Backup created: {backup_file}")
+    return backup_file
 
-def validate_save_data(data: Dict) -> bool:
+def restore_from_backup(backup_file):
     """
-    Validate the structure and content of save data.
+    Restore game data from a backup file.
+    """
+    with open(backup_file, 'r') as f:
+        backup_data = json.load(f)
     
-    Args:
-        data: Dictionary containing game data to validate
-        
-    Returns:
-        bool: True if data is valid, False otherwise
-    """
+    session = Session()
     try:
-        # Check if data is a dictionary
-        if not isinstance(data, dict):
-            return False
-            
-        # Check each player's data structure
-        for user_id, player_data in data.items():
-            required_keys = {
-                'mascota', 'comida', 'última_alimentación',
-                'última_actualización', 'inventario', 'combat_stats'
-            }
-            
-            # Check if all required keys exist
-            if not all(key in player_data for key in required_keys):
-                return False
-                
-            # Check mascota structure
-            mascota_keys = {
-                'hambre', 'energia', 'nivel', 'oro', 'oro_hora'
-            }
-            if not all(key in player_data['mascota'] for key in mascota_keys):
-                return False
-                
-            # Check combat_stats structure
-            combat_keys = {
-                'level', 'exp', 'battles_today', 'fire_coral'
-            }
-            if not all(key in player_data['combat_stats'] for key in combat_keys):
-                return False
-        
-        return True
-        
+        for player_data in backup_data:
+            player_id = player_data['id']
+            player = get_player(player_id)
+            if player:
+                for key, value in player_data.items():
+                    setattr(player, key, value)
+            else:
+                new_player = Player.from_dict(player_data)
+                session.add(new_player)
+        session.commit()
+        logger.info(f"Game data restored from backup: {backup_file}")
     except Exception as e:
-        logger.error(f"Error validating save data: {e}")
-        return False
+        session.rollback()
+        logger.error(f"Error restoring from backup: {e}")
+        raise
+    finally:
+        session.close()
 
-def backup_data(data: Dict) -> bool:
+def get_save_info():
     """
-    Create manual backup of game data.
+    Get information about the current save state.
+    """
+    players = get_all_players()
+    total_players = len(players)
+    last_save = max(player.ultima_actualizacion for player in players) if players else None
     
-    Args:
-        data: Dictionary containing game data to backup
-        
-    Returns:
-        bool: True if backup successful, False otherwise
-    """
-    try:
-        if not validate_save_data(data):
-            logger.error("Invalid data structure, backup aborted")
-            return False
-            
-        Path(BACKUP_DIR).mkdir(exist_ok=True)
-        
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_name = f'game_data_backup_{timestamp}.json'
-        backup_path = Path(BACKUP_DIR) / backup_name
-        
-        with open(backup_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            
-        logger.info(f"Manual backup created: {backup_name}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error creating backup: {e}")
-        return False
+    return {
+        "total_players": total_players,
+        "last_save": datetime.fromtimestamp(last_save).strftime("%Y-%m-%d %H:%M:%S") if last_save else None
+    }
 
-def get_save_info() -> Dict:
+def initialize_new_player(player_id, nombre):
     """
-    Get information about current save file and backups.
-    
-    Returns:
-        dict: Information about saves and backups
+    Initialize a new player in the database.
     """
-    try:
-        save_path = Path(SAVE_FILE)
-        backup_path = Path(BACKUP_DIR)
-        
-        info = {
-            "save_exists": save_path.exists(),
-            "save_size": save_path.stat().st_size if save_path.exists() else 0,
-            "save_modified": datetime.fromtimestamp(save_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S') if save_path.exists() else None,
-            "backups": []
-        }
-        
-        if backup_path.exists():
-            backup_files = sorted(backup_path.glob('game_data_backup_*.json'), reverse=True)
-            for backup in backup_files:
-                info["backups"].append({
-                    "name": backup.name,
-                    "size": backup.stat().st_size,
-                    "modified": datetime.fromtimestamp(backup.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-                })
-        
-        return info
-        
-    except Exception as e:
-        logger.error(f"Error getting save info: {e}")
-        return {}
-    
+    new_player = create_player(player_id, nombre)
+    logger.info(f"New player initialized: {nombre} (ID: {player_id})")
+    return new_player.to_dict()

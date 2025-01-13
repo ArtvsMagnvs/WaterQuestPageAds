@@ -63,41 +63,43 @@ def initialize_new_player():
         }
     }
 
+from database.db.game_db import get_player, create_player, Session
+
+from database.db.game_db import get_player, create_player, Session
+
 async def start(update: Update, context: CallbackContext):
     """Initialize user data and start the game."""
     try:
         user_id = update.effective_user.id
         
-        # Get players dictionary from context
-        if 'players' not in context.bot_data:
-            context.bot_data['players'] = {}
-        
-        if user_id not in context.bot_data['players']:
-            # Initialize new player
-            context.bot_data['players'][user_id] = initialize_new_player()
-            save_game_data(context.bot_data['players'])
+        session = Session()
+        try:
+            player = get_player(session, user_id)
             
+            if not player:
+                # Initialize new player
+                new_player_data = initialize_new_player()
+                player = create_player(session, user_id, new_player_data)
+                session.commit()
+                message = SUCCESS_MESSAGES["welcome"]
+            else:
+                message = "¡Ya tienes una mascota! Usa los botones para jugar."
+
+            # Generate buttons based on player data
+            reply_markup = generar_botones(player.__dict__)
+
             if update.callback_query:
                 await update.callback_query.message.reply_text(
-                    SUCCESS_MESSAGES["welcome"],
-                    reply_markup=generar_botones()
+                    message,
+                    reply_markup=reply_markup
                 )
             else:
                 await update.message.reply_text(
-                    SUCCESS_MESSAGES["welcome"],
-                    reply_markup=generar_botones()
+                    message,
+                    reply_markup=reply_markup
                 )
-        else:
-            if update.callback_query:
-                await update.callback_query.message.reply_text(
-                    "¡Ya tienes una mascota! Usa los botones para jugar.",
-                    reply_markup=generar_botones()
-                )
-            else:
-                await update.message.reply_text(
-                    "¡Ya tienes una mascota! Usa los botones para jugar.",
-                    reply_markup=generar_botones()
-                )
+        finally:
+            session.close()
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         if update.callback_query:
@@ -185,54 +187,65 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=generar_botones()
         )
 
+from database.db.game_db import get_player, Session
+
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show detailed player statistics."""
     try:
         user_id = update.effective_user.id
-        if user_id not in context.bot_data.get('players', {}):
-            if update.callback_query:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
-            else:
-                await update.message.reply_text(ERROR_MESSAGES["no_game"])
-            return
-
-        player = context.bot_data['players'][user_id]
         
-        stats_text = (
-            "📊 *Estadísticas Detalladas:*\n\n"
-            f"🐾 *Nivel de Mascota:* {player['mascota']['nivel']}\n"
-            f"💰 *Oro Total:* {player['mascota']['oro']}\n"
-            f"⚡ *Producción/min:* {player['mascota']['oro_hora']}\n\n"
-            f"⚔️ *Nivel de Combate:* {player['combat_stats']['level']}\n"
-            f"🌺 *Coral de Fuego:* {player['combat_stats']['fire_coral']}\n"
-            f"💫 *EXP:* {player['combat_stats']['exp']}\n\n"
-            f"🎯 *Batallas Hoy:* {player['combat_stats']['battles_today']}/20\n"
-        )
+        session = Session()
+        try:
+            player = get_player(session, user_id)
+            
+            if not player:
+                message = ERROR_MESSAGES["no_game"]
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(message)
+                else:
+                    await update.message.reply_text(message)
+                return
 
-        # Add premium info if any premium feature is active
-        if any(player.get('premium_features', {}).values()):
-            stats_text += "\n👑 *Premium Features Activas:*\n"
-            if player['premium_features'].get('premium_status'):
-                stats_text += "• Status Premium\n"
-            if player['premium_features'].get('auto_collector'):
-                stats_text += "• Auto-Recolector\n"
-            if player['premium_features'].get('daily_bonus'):
-                stats_text += "• Bonus Diario\n"
-            if player['premium_features'].get('lucky_tickets', 0) > 0:
-                stats_text += f"• 🎫 Lucky Tickets: {player['premium_features']['lucky_tickets']}\n"
+            stats_text = (
+                "📊 *Estadísticas Detalladas:*\n\n"
+                f"🐾 *Nivel de Mascota:* {player.mascota['nivel']}\n"
+                f"💰 *Oro Total:* {player.mascota['oro']}\n"
+                f"⚡ *Producción/min:* {player.mascota['oro_hora']}\n\n"
+                f"⚔️ *Nivel de Combate:* {player.combat_stats['level']}\n"
+                f"🌺 *Coral de Fuego:* {player.combat_stats['fire_coral']}\n"
+                f"💫 *EXP:* {player.combat_stats['exp']}\n\n"
+                f"🎯 *Batallas Hoy:* {player.combat_stats['battles_today']}/20\n"
+            )
 
-        if update.callback_query:
-            await update.callback_query.message.reply_text(
-                stats_text,
-                parse_mode='Markdown',
-                reply_markup=generar_botones()
-            )
-        else:
-            await update.message.reply_text(
-                stats_text,
-                parse_mode='Markdown',
-                reply_markup=generar_botones()
-            )
+            # Add premium info if any premium feature is active
+            if any(player.premium_features.values()):
+                stats_text += "\n👑 *Premium Features Activas:*\n"
+                if player.premium_features.get('premium_status'):
+                    stats_text += "• Status Premium\n"
+                if player.premium_features.get('auto_collector'):
+                    stats_text += "• Auto-Recolector\n"
+                if player.premium_features.get('daily_bonus'):
+                    stats_text += "• Bonus Diario\n"
+                if player.premium_features.get('lucky_tickets', 0) > 0:
+                    stats_text += f"• 🎫 Lucky Tickets: {player.premium_features['lucky_tickets']}\n"
+
+            reply_markup = generar_botones(player.__dict__)
+
+            if update.callback_query:
+                await update.callback_query.message.reply_text(
+                    stats_text,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+            else:
+                await update.message.reply_text(
+                    stats_text,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+                
+        finally:
+            session.close()
             
     except Exception as e:
         logger.error(f"Error in stats command: {e}")
