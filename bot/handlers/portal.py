@@ -169,6 +169,16 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         player = context.bot_data['players'][user_id]
+        
+        # Verifica si 'portal_stats' existe, si no lo inicializa
+        if 'portal_stats' not in player:
+            player['portal_stats'] = {
+                'total_spins': 0,
+                'spins_since_legendary': 0,
+                'spins_since_epic': 0,
+                'spins_since_rare': 0
+            }
+
         tickets = player.get('premium_features', {}).get('tickets', 0)
         
         mensaje = (

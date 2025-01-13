@@ -27,7 +27,7 @@ from bot.config.premium_settings import PREMIUM_FEATURES
 
 from .portal import (
     portal_menu, 
-    spin_portal
+    spin_portal,
 )
 
 __all__ = [

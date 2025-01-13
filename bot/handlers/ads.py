@@ -199,27 +199,36 @@ async def grant_ad_rewards(player):
 
 async def check_ad_milestones(update: Update, context: ContextTypes.DEFAULT_TYPE, player):
     """Checks and grants milestone rewards based on daily ad count."""
-    daily_ads = player.get("daily_ads", 0)
-    milestones = AD_CONFIG['ad_rewards']['milestones']
-    
-    for count, rewards in milestones.items():
-        if daily_ads == count:
-            milestone_rewards = []
-            for reward_type, value in rewards.items():
-                if reward_type == 'miniboss_attempts':
-                    player['miniboss_attempts'] = player.get('miniboss_attempts', 0) + value
-                    milestone_rewards.append(f"+{value} MiniBoss attempts")
-                elif reward_type == 'gold_gen':
-                    player['gold_multiplier'] = player.get('gold_multiplier', 1) * value
-                    milestone_rewards.append(f"{value}x Gold generation boost")
-                elif reward_type == 'destiny_fragment':
-                    player['destiny_fragments'] = player.get('destiny_fragments', 0) + value
-                    milestone_rewards.append(f"+{value} Destiny Fragment")
-            
-            if milestone_rewards:
-                milestone_message = f"🎉 Milestone Reached ({count} ads):\n" + "\n".join(milestone_rewards)
-                await update.callback_query.message.reply_text(milestone_message)
-            break
+    try:
+        daily_ads = player.get("daily_ads", 0)
+        milestones = AD_CONFIG['ad_rewards']['milestones']
+        
+        for count, rewards in milestones.items():
+            if daily_ads == count:
+                milestone_rewards = []
+                for reward_type, value in rewards.items():
+                    if reward_type == 'miniboss_attempts':
+                        player['miniboss_attempts'] = player.get('miniboss_attempts', 0) + value
+                        milestone_rewards.append(f"+{value} intentos de MiniBoss")
+                    elif reward_type == 'gold_gen':
+                        player['gold_multiplier'] = player.get('gold_multiplier', 1) * value
+                        milestone_rewards.append(f"{value}x mejora en generación de oro")
+                    elif reward_type == 'tickets':  # Internamente son tickets
+                        player['premium_features']['tickets'] = (
+                            player['premium_features'].get('tickets', 0) + value
+                        )
+                        milestone_rewards.append(f"+{value} Fragmentos del Destino")  # En la interfaz son Fragmentos del Destino
+                
+                if milestone_rewards:
+                    milestone_message = (
+                        f"🎉 ¡Hito alcanzado ({count} anuncios vistos)!\n\n" +
+                        "\n".join(milestone_rewards)
+                    )
+                    await update.callback_query.message.reply_text(milestone_message)
+                break
+    except Exception as e:
+        logger.error(f"Error in check_ad_milestones: {e}")
+        await update.callback_query.message.reply_text("❌ An unexpected error occurred. Please try again later.")
 
 async def retry_combat_ad(update: Update, context: ContextTypes.DEFAULT_TYPE, combat_type: str):
     """Maneja el reintento de combate a través de la visualización de anuncios."""
