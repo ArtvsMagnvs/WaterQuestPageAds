@@ -16,7 +16,8 @@ from bot.config.settings import (
 )
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
-from handlers.shop import comprar_fragmentos
+from bot.handlers.shop import comprar_fragmentos
+
 
 PORTAL_REWARDS = {
     "legendary": {  # 1% probabilidad
