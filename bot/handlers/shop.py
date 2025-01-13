@@ -222,6 +222,33 @@ async def comprar(update: Update, context: ContextTypes.DEFAULT_TYPE, item_name:
                 reply_markup=generar_botones()
             )
 
+async def comprar_fragmentos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Permite comprar fragmentos de destino con oro"""
+    user_id = update.effective_user.id
+    player = context.bot_data['players'].get(user_id)
+
+    if not player:
+        await update.callback_query.message.reply_text("❌ No se encontró tu perfil de jugador.")
+        return
+
+    # Determinar cuántos fragmentos de destino puede comprar el jugador
+    fragmentos_precio = 5000  # Ejemplo: 5000 oro por 1 fragmento de destino
+    cantidad = 1  # En este caso compran 1 fragmento por transacción
+
+    if player["mascota"]["oro"] < fragmentos_precio:
+        await update.callback_query.message.reply_text("❌ No tienes suficiente oro para comprar Fragmentos de Destino.")
+        return
+
+    # Deduce el oro y agrega los fragmentos (tickets)
+    player["mascota"]["oro"] -= fragmentos_precio
+    player["premium_features"]["tickets"] += cantidad  # Aumentar los tickets disponibles
+
+    # Guardar los datos
+    save_game_data(context.bot_data['players'])
+
+    # Mensaje de confirmación
+    await update.callback_query.message.reply_text(f"✅ Has comprado {cantidad} Fragmento de Destino.")
+
 async def premium_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Display the premium shop menu with TON prices."""
     try:
@@ -240,11 +267,21 @@ async def premium_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = []
         for item_name, item_data in PREMIUM_SHOP_ITEMS.items():
-            item_info = ShopManager.format_premium_item_info(item_data)
-            header_message += f"{item_info}\n\n"
+            # Mostrar el nombre y la descripción en formato Fragmentos del Destino
+            item_display_name = item_data["name"]
+            item_description = item_data["description"]
+            item_price = item_data["price"]
             
+            # Añadir al mensaje de la tienda
+            header_message += (
+                f"{item_display_name}\n"
+                f"{item_description}\n"
+                f"💰 Precio: {item_price} TON\n\n"
+            )
+
+            # Crear botón para comprar
             button = InlineKeyboardButton(
-                f"Comprar {item_data['emoji']} {item_name} ({item_data['price']} TON)",
+                f"Comprar {item_display_name} ({item_price} TON)",
                 callback_data=f"buy_premium_{item_name}"
             )
             keyboard.append([button])
@@ -414,17 +451,25 @@ async def get_premium_item(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         item = PREMIUM_SHOP_ITEMS.get(item_name)
         if not item:
-            await query.message.reply_text("Item not found in premium shop.")
+            await query.message.reply_text("Item no encontrado en la tienda premium.")
             return
 
-        # Update player's premium features
-        if 'premium_features' not in player:
-            player['premium_features'] = {}
-        player['premium_features'][item_name] = True
-        save_game_data(context.bot_data['players'])
+        # Procesar compra de tickets (Fragmentos del Destino)
+        if "tickets" in item_name:
+            amount = item.get("amount", 0)
+            player["premium_features"]["tickets"] += amount
+            save_game_data(context.bot_data['players'])
 
-        display_name = item.get('display_name', item_name)
-        await query.message.reply_text(f"✅ Has obtenido {item['emoji']} {display_name} de forma gratuita para pruebas!")
+            await query.message.reply_text(
+                f"✅ Has comprado {amount} {item['name']} con éxito."
+            )
+        else:
+            # Otros ítems, como suscripciones premium
+            player["premium_features"][item_name] = True
+            save_game_data(context.bot_data['players'])
+            await query.message.reply_text(
+                f"✅ Has obtenido {item['name']} con éxito."
+            )
 
     except Exception as e:
         logger.error(f"Error in get_premium_item: {e}")

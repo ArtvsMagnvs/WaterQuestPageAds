@@ -7,6 +7,7 @@ import logging
 import asyncio
 from datetime import datetime
 
+
 from bot.config.settings import (
     SUCCESS_MESSAGES, 
     ERROR_MESSAGES, 
@@ -15,6 +16,7 @@ from bot.config.settings import (
 )
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
+from handlers.shop import comprar_fragmentos
 
 PORTAL_REWARDS = {
     "legendary": {  # 1% probabilidad
@@ -166,16 +168,8 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         player = context.bot_data['players'][user_id]
-        # Initialize portal stats if not exists
-        if 'portal_stats' not in player:
-            player['portal_stats'] = {
-                'total_spins': 0,
-                'spins_since_legendary': 0,
-                'spins_since_epic': 0,
-                'spins_since_rare': 0
-            }
-            
         tickets = player.get('premium_features', {}).get('tickets', 0)
+        
         mensaje = (
             "🌊 Portal de las Mareas 🌊\n\n"
             "Usa tus Fragmentos de Destino para obtener recompensas:\n\n"
@@ -187,25 +181,31 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🎫 Fragmentos disponibles: {tickets}\n\n"
             f"🎲 Giros totales: {player['portal_stats']['total_spins']}\n"
             f"⭐ Giros hasta legendario garantizado: {PITY_SYSTEM['legendary_pity'] - player['portal_stats']['spins_since_legendary']}\n"
-            f"💫 Giros hasta epico garantizado: {PITY_SYSTEM['epic_pity'] - player['portal_stats']['spins_since_epic']} giros\n"
+            f"💫 Giros hasta épico garantizado: {PITY_SYSTEM['epic_pity'] - player['portal_stats']['spins_since_epic']} giros\n"
             f"✨ Giros hasta raro garantizado: {PITY_SYSTEM['rare_pity'] - player['portal_stats']['spins_since_rare']} giros"
-
         )
         
+        # Botón para abrir el portal si tiene tickets suficientes
         keyboard = []
         if tickets >= 1:
             keyboard.append([InlineKeyboardButton("🌊 Abrir Portal (1 Fragmento)", callback_data="portal_spin_1")])
         if tickets >= 10:
             keyboard.append([InlineKeyboardButton("🌟 10 Aperturas (Raro+ garantizado)", callback_data="portal_spin_10")])
+
+        # Este botón siempre estará activo en el menú
+        keyboard.append([InlineKeyboardButton("🛒 Comprar Fragmentos de Destino", callback_data="buy_tickets")])
+
+        # Opción para volver al menú principal
         keyboard.append([InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")])
+        
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         if update.callback_query:
             try:
-                # Try to edit the existing message
+                # Intenta editar el mensaje existente
                 await update.callback_query.message.edit_text(mensaje, reply_markup=reply_markup)
             except Exception as edit_error:
-                # If editing fails, send a new message
+                # Si falla, manda un nuevo mensaje
                 logger.warning(f"Could not edit message, sending new one: {edit_error}")
                 await update.callback_query.message.reply_text(mensaje, reply_markup=reply_markup)
         else:
@@ -220,6 +220,7 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(ERROR_MESSAGES["generic_error"])
         except Exception as reply_error:
             logger.error(f"Failed to send error message: {reply_error}")
+
 
 async def spin_portal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle portal spinning."""

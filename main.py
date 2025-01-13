@@ -86,14 +86,15 @@ def initialize_new_player():
         "premium_features": {
             "premium_status": False,
             "premium_status_expires": 0,
+            "tickets": 0,  # "Fragmentos del Destino" en la interfaz, "tickets" en el código
         },
         "watershard": 0,
-        "fragmento_del_destino": 0,  # Añadido: Fragmentos del Destino
         "miniboss_stats": {
             "attempts_today": 0,
             "last_attempt_date": None
         },
     }
+
 
 
 

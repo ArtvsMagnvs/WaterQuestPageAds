@@ -77,25 +77,25 @@ PREMIUM_SHOP_ITEMS = {
         "duration": 30 * 24 * 60 * 60,  # 30 days in seconds
         "type": "subscription"
     },
-    "fragmento_de_destino_1": {
+    "tickets_1": {  # "tickets" en el código, "Fragmentos del Destino" en la interfaz
         "name": "🎫 1 Fragmento de Destino",
         "description": "1 Fragmento de Destino para el Portal de las Mareas",
         "price": 0.25,  # 0.25 USDT in TON
-        "amount": 1,
+        "amount": 1,  # Cantidad de tickets entregados
         "type": "consumable"
     },
-    "fragmento_de_destino_5": {
+    "tickets_5": {
         "name": "🎫 5 Fragmentos de Destino",
         "description": "5 Fragmentos de Destino para el Portal de las Mareas",
         "price": 1.0,  # 1 USDT in TON
-        "amount": 5,
+        "amount": 5,  # Cantidad de tickets entregados
         "type": "consumable"
     },
-    "fragmento_de_destino_10": {
+    "tickets_10": {
         "name": "🎫 10 Fragmentos de Destino",
         "description": "10 Fragmentos de Destino para el Portal de las Mareas",
         "price": 1.5,  # 1.5 USDT in TON
-        "amount": 10,
+        "amount": 10,  # Cantidad de tickets entregados
         "type": "consumable"
     }
 }

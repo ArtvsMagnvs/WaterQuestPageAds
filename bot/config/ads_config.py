@@ -31,9 +31,10 @@ AD_CONFIG = {
             },
             10: {
                 'miniboss_attempts': 3,  # +3 intentos de MiniBoss por 10 anuncios
-                'destiny_fragment': 1  # +1 Fragmento del Destino por 10 anuncios
+                'tickets': 1  # +1 Ticket por 10 anuncios (interfaz muestra Fragmento del Destino)
             }
         }
     }
 }
+
 
