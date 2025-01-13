@@ -7,6 +7,8 @@ logger = logging.getLogger(__name__)
 
 EXPONENTIAL_GROWTH = 2  # Each level increases cost and benefits by 100%
 
+
+
 # Regular shop items
 SHOP_ITEMS = [
     {

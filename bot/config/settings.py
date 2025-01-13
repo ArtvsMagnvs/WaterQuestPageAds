@@ -216,7 +216,7 @@ def calculate_daily_rewards(reward_type: str, player_level: int, prestige_level:
     min_coral, max_coral = base_rewards["coral"]
     min_comida, max_comida = base_rewards["comida"]
     min_exp, max_exp = base_rewards["exp"]
-    min_fragmento, max_fragmento = base_rewards["fragmento_del_destino"]
+    min_tickets, max_tickets = base_rewards["fragmento_del_destino"]
     
     return {
         "oro": (
@@ -237,8 +237,8 @@ def calculate_daily_rewards(reward_type: str, player_level: int, prestige_level:
             int(max_exp * level_multiplier * prestige_multiplier)
         ),
         "fragmento_del_destino": (
-            int(min_fragmento * prestige_multiplier),
-            int(max_fragmento * prestige_multiplier)
+            int(min_tickets * prestige_multiplier),
+            int(max_tickets * prestige_multiplier)
         )
     }
 # Experience Settings
@@ -297,6 +297,7 @@ SUCCESS_MESSAGES = {
         "💰 {} oro\n"
         "🌺 {} coral\n"
         "🍖 {} comida\n"
+        "🎫 {} fragmentos_del_destino\n"
         "⚡ Energía restaurada\n"
         "💫 {} exp\n\n"
         "🔥 Racha actual: {} días"
@@ -306,7 +307,7 @@ SUCCESS_MESSAGES = {
         "¡Todas las recompensas mejoradas!\n"
         "{}"
     ),
-    "weekly_tickets": "🎫 ¡Recibiste 3 Lucky Tickets semanales!",
+    "weekly_tickets": "🎫 ¡Recibiste 3 y Fragmentos del Destino semanales!",
     "streak_bonus": "✨ ¡Bonus de racha x{}!",
     
     # Prestige Messages

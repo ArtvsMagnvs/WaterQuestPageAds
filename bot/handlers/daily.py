@@ -95,6 +95,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
         coral = int(random.randint(*rewards['coral']) * multiplier)
         comida = int(random.randint(*rewards['comida']) * multiplier)
         exp = int(random.randint(*rewards['exp']) * multiplier)
+        tickets = int(random.randint(*rewards['fragmento_del_destino']) * multiplier)
 
         # Update player stats
         player['mascota']['oro'] += oro
@@ -102,13 +103,14 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
         player['comida'] += comida
         player['mascota']['energia'] = rewards['energia']  # Full energy restore
         player['combat_stats']['exp'] += exp
+        player['fragmento_del_destino'] = player.get('tickets', 0) + tickets
 
         # Check for weekly premium tickets
         premium_ticket_message = ""
         if has_daily_bonus:
             last_weekly = player['daily_reward'].get('last_weekly_tickets', 0)
             if time.time() - last_weekly >= DAILY_REWARDS['weekly_reset']:
-                player['premium_features']['lucky_tickets'] += 3
+                player['premium_features']['tickets'] += 3
                 player['daily_reward']['last_weekly_tickets'] = time.time()
                 premium_ticket_message = SUCCESS_MESSAGES["weekly_tickets"]
 
@@ -120,9 +122,9 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         # Prepare response message
         message = SUCCESS_MESSAGES["daily_reward"].format(
-            oro, coral, comida, exp, 
-            "1 día" if player['daily_reward']['streak'] == 1 else f"{player['daily_reward']['streak']} días"
-        )
+        oro, coral, comida, exp, tickets,
+        "1 día" if player['daily_reward']['streak'] == 1 else f"{player['daily_reward']['streak']} días"
+    )
         if multiplier > 1:
             message += "\n" + SUCCESS_MESSAGES["streak_bonus"].format(multiplier)
         if is_premium or has_daily_bonus:

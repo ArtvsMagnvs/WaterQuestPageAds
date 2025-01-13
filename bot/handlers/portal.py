@@ -175,7 +175,7 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 'spins_since_rare': 0
             }
             
-        tickets = player.get('premium_features', {}).get('lucky_tickets', 0)
+        tickets = player.get('premium_features', {}).get('tickets', 0)
         mensaje = (
             "🌊 Portal de las Mareas 🌊\n\n"
             "Usa tus Fragmentos de Destino para obtener recompensas:\n\n"
@@ -232,7 +232,7 @@ async def spin_portal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tickets_needed = 10 if is_multi else 1
         
         # Check tickets
-        if player.get('premium_features', {}).get('lucky_tickets', 0) < tickets_needed:
+        if player.get('premium_features', {}).get('tickets', 0) < tickets_needed:
             await update.callback_query.message.reply_text(PORTAL_MESSAGES["no_tickets"])
             return
 
@@ -305,7 +305,7 @@ async def spin_portal(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 player['watershard'] += reward["value"]
 
         # Deduct tickets
-        player['premium_features']['lucky_tickets'] -= tickets_needed
+        player['premium_features']['tickets'] -= tickets_needed
         
         # Save changes
         save_game_data(context.bot_data['players'])
