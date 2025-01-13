@@ -232,7 +232,7 @@ async def comprar_fragmentos(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     # Determinar cuántos fragmentos de destino puede comprar el jugador
-    fragmentos_precio = 5000  # Ejemplo: 5000 oro por 1 fragmento de destino
+    fragmentos_precio = 5  # Ejemplo: 5 oro por 1 fragmento de destino
     cantidad = 1  # En este caso compran 1 fragmento por transacción
 
     if player["mascota"]["oro"] < fragmentos_precio:
