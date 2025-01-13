@@ -13,7 +13,7 @@ import asyncio
 from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
-from bot.handlers.shop import premium_shop, get_premium_item
+from bot.handlers.shop import premium_shop, get_premium_item, comprar_fragmentos
 
 # Import configurations and save system
 from bot.config.settings import (
@@ -198,6 +198,8 @@ async def button(update: Update, context: CallbackContext):
             await retry_combat_ad(update, context, combat_type)
         elif query.data == "premium_shop":
             await premium_shop(update, context)
+        elif query.data == "comprar_fragmentos":
+            await comprar_fragmentos(update, context)
         else:
             logger.warning(f"Unhandled callback_data: {query.data}")
             await query.message.reply_text(
