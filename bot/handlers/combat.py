@@ -5,6 +5,8 @@ from telegram.ext import ContextTypes
 import random
 from datetime import datetime
 import logging
+from database.db.game_db import Session, Player
+from bot.utils.save_system import save_player
 
 from bot.config.settings import (
     SUCCESS_MESSAGES, 
@@ -45,114 +47,125 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle quick combat encounters."""
     try:
         user_id = update.effective_user.id
-        if user_id not in context.bot_data.get('players', {}):
-            if update.callback_query:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
-            else:
-                await update.message.reply_text(ERROR_MESSAGES["no_game"])
-            return
-
-        player = context.bot_data['players'][user_id]
-        stats = player["combat_stats"]
         
-        # Check pet level requirement
-        if player["mascota"]["nivel"] < PET_LEVEL_REQUIREMENT:
-            message = f"⚠️ Necesitas nivel {PET_LEVEL_REQUIREMENT} de mascota para acceder al Combate Rápido."
-            if update.callback_query:
-                await update.callback_query.message.reply_text(message, reply_markup=generar_botones())
-            else:
-                await update.message.reply_text(message, reply_markup=generar_botones())
-            return
+        # Create a new database session
+        session = Session()
         
-        # Reset battles count if it's a new day
-        current_date = datetime.now().date()
-        if stats["last_battle_date"] != str(current_date):
-            stats["battles_today"] = 0
-            stats["last_battle_date"] = str(current_date)
+        try:
+            # Retrieve player from database
+            player = session.query(Player).filter(Player.id == user_id).first()
+            
+            if not player:
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                else:
+                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                return
 
-        # Check max battles (considering premium status)
-        max_battles = MAX_BATTLES_PER_DAY
-        if player.get('premium_features', {}).get('premium_status', False):
-            max_battles += 10  # Premium users get 10 extra battles
+            stats = player.combat_stats
+        
+            # Check pet level requirement
+            if player.mascota["nivel"] < PET_LEVEL_REQUIREMENT:
+                message = f"⚠️ Necesitas nivel {PET_LEVEL_REQUIREMENT} de mascota para acceder al Combate Rápido."
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(message, reply_markup=generar_botones())
+                else:
+                    await update.message.reply_text(message, reply_markup=generar_botones())
+                return
+            
+            # Reset battles count if it's a new day
+            current_date = datetime.now().date()
+            if stats["last_battle_date"] != str(current_date):
+                stats["battles_today"] = 0
+                stats["last_battle_date"] = str(current_date)
 
-        if stats["battles_today"] >= max_battles:
-            if update.callback_query:
-                await update.callback_query.message.reply_text(
-                    f"⚠️ Ya has realizado todas tus batallas del día! ({max_battles})",
-                    reply_markup=generar_botones()
+            # Check max battles (considering premium status)
+            max_battles = MAX_BATTLES_PER_DAY
+            if player.premium_features.get('premium_status', False):
+                max_battles += 10  # Premium users get 10 extra battles
+
+            if stats["battles_today"] >= max_battles:
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(
+                        f"⚠️ Ya has realizado todas tus batallas del día! ({max_battles})",
+                        reply_markup=generar_botones()
+                    )
+                else:
+                    await update.message.reply_text(
+                        f"⚠️ Ya has realizado todas tus batallas del día! ({max_battles})",
+                        reply_markup=generar_botones()
+                    )
+                return
+
+            # Generate enemy based on player level
+            player_level = stats["level"]
+            enemy_level = max(0, player_level - 1 + random.randint(0, 2))
+            
+            # Calculate battle result (base 75% win rate + agility bonus)
+            victory_chance = 0.75 + (stats["agi"] / 1000)  # Agility gives small bonus
+            victory = random.random() < victory_chance
+
+            if victory:
+                # Calculate rewards
+                is_premium = player.premium_features.get('premium_status', False)
+                rewards = calculate_rewards(enemy_level, is_premium)
+
+                # Update stats
+                stats["exp"] += rewards["exp"]
+                player.mascota["oro_hora"] += rewards["gold_per_min"]
+                stats["fire_coral"] += rewards["coral"]
+
+                # Level up check
+                while stats["exp"] >= exp_needed_for_level(stats["level"]):
+                    stats["exp"] -= exp_needed_for_level(stats["level"])
+                    stats["level"] += 1
+                    
+                    # Update combat stats on level up
+                    level = stats["level"]
+                    stats.update({
+                        "hp": 100 + (level * 10),
+                        "atk": 10 + (level * 2),
+                        "mp": 50 + (level * 5),
+                        "def_p": 5 + (level * 1.5),
+                        "def_m": 5 + (level * 1.5),
+                        "agi": 10 + (level * 1)
+                    })
+
+                message = (
+                    f"🗡 ¡Victoria!\n"
+                    f"💫 EXP ganada: {rewards['exp']}\n"
+                    f"💰 Oro por minuto +{rewards['gold_per_min']}\n"
+                    f"🌺 Coral de Fuego +{rewards['coral']}"
                 )
+
+                if stats["level"] > player_level:  # If leveled up
+                    message += f"\n\n🎉 ¡Subiste al nivel {stats['level']}!"
             else:
-                await update.message.reply_text(
-                    f"⚠️ Ya has realizado todas tus batallas del día! ({max_battles})",
-                    reply_markup=generar_botones()
-                )
-            return
+                message = "❌ ¡Derrota! Mejor suerte la próxima vez."
 
-        # Generate enemy based on player level
-        player_level = stats["level"]
-        enemy_level = max(0, player_level - 1 + random.randint(0, 2))
-        
-        # Calculate battle result (base 75% win rate + agility bonus)
-        victory_chance = 0.75 + (stats["agi"] / 1000)  # Agility gives small bonus
-        victory = random.random() < victory_chance
+            # Update battles count
+            stats["battles_today"] += 1
+            battles_left = max_battles - stats["battles_today"]
+            message += f"\n\n⚔️ Batallas restantes hoy: {battles_left}"
 
-        if victory:
-            # Calculate rewards
-            is_premium = player.get('premium_features', {}).get('premium_status', False)
-            rewards = calculate_rewards(enemy_level, is_premium)
+            # Update player in the database
+            player.combat_stats = stats
+            session.commit()
 
-            # Update stats
-            stats["exp"] += rewards["exp"]
-            player["mascota"]["oro_hora"] += rewards["gold_per_min"]
-            stats["fire_coral"] += rewards["coral"]
+            # Create reply keyboard
+            keyboard = [
+                [InlineKeyboardButton("⚔️ Otro Combate", callback_data="combate")],
+                [InlineKeyboardButton("🏠 Volver", callback_data="start")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
 
-            # Level up check
-            while stats["exp"] >= exp_needed_for_level(stats["level"]):
-                stats["exp"] -= exp_needed_for_level(stats["level"])
-                stats["level"] += 1
-                
-                # Update combat stats on level up
-                level = stats["level"]
-                stats.update({
-                    "hp": 100 + (level * 10),
-                    "atk": 10 + (level * 2),
-                    "mp": 50 + (level * 5),
-                    "def_p": 5 + (level * 1.5),
-                    "def_m": 5 + (level * 1.5),
-                    "agi": 10 + (level * 1)
-                })
+            if update.callback_query:
+                await update.callback_query.message.reply_text(message, reply_markup=reply_markup)
+            else:
+                await update.message.reply_text(message, reply_markup=reply_markup)
 
-            message = (
-                f"🗡 ¡Victoria!\n"
-                f"💫 EXP ganada: {rewards['exp']}\n"
-                f"💰 Oro por minuto +{rewards['gold_per_min']}\n"
-                f"🌺 Coral de Fuego +{rewards['coral']}"
-            )
-
-            if stats["level"] > player_level:  # If leveled up
-                message += f"\n\n🎉 ¡Subiste al nivel {stats['level']}!"
-        else:
-            message = "❌ ¡Derrota! Mejor suerte la próxima vez."
-
-        # Update battles count
-        stats["battles_today"] += 1
-        battles_left = max_battles - stats["battles_today"]
-        message += f"\n\n⚔️ Batallas restantes hoy: {battles_left}"
-
-        # Save game data
-        save_game_data(context.bot_data['players'])
-
-        # Create reply keyboard
-        keyboard = [
-            [InlineKeyboardButton("⚔️ Otro Combate", callback_data="combate")],
-            [InlineKeyboardButton("🏠 Volver", callback_data="start")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        if update.callback_query:
-            await update.callback_query.message.reply_text(message, reply_markup=reply_markup)
-        else:
-            await update.message.reply_text(message, reply_markup=reply_markup)
+        finally:
+            session.close()
 
     except Exception as e:
         logger.error(f"Error in quick_combat function: {e}")
@@ -165,45 +178,56 @@ async def view_combat_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """View detailed combat statistics."""
     try:
         user_id = update.effective_user.id
-        if user_id not in context.bot_data.get('players', {}):
-            if update.callback_query:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
-            else:
-                await update.message.reply_text(ERROR_MESSAGES["no_game"])
-            return
-
-        stats = context.bot_data['players'][user_id]["combat_stats"]
         
-        message = (
-            "⚔️ *Estadísticas de Combate*\n\n"
-            f"📊 Nivel: {stats['level']}\n"
-            f"❤️ HP: {stats['hp']}\n"
-            f"⚔️ ATK: {stats['atk']}\n"
-            f"🌟 MP: {stats['mp']}\n"
-            f"🛡️ DEF Física: {stats['def_p']}\n"
-            f"✨ DEF Mágica: {stats['def_m']}\n"
-            f"💨 Agilidad: {stats['agi']}\n"
-            f"💪 Aguante: {stats['sta']}\n"
-            f"🌺 Coral de Fuego: {stats['fire_coral']}\n\n"
-            f"📈 EXP: {stats['exp']}/{exp_needed_for_level(stats['level'])}\n"
-            f"⚔️ Batallas hoy: {stats['battles_today']}/{MAX_BATTLES_PER_DAY}"
-        )
+        # Create a new database session
+        session = Session()
+        
+        try:
+            # Fetch player from the database
+            player = session.query(Player).filter(Player.id == user_id).first()
+            
+            if not player:
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                else:
+                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                return
 
-        keyboard = [[InlineKeyboardButton("🔙 Volver", callback_data="start")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+            stats = player.combat_stats
+            
+            message = (
+                "⚔️ *Estadísticas de Combate*\n\n"
+                f"📊 Nivel: {stats['level']}\n"
+                f"❤️ HP: {stats['hp']}\n"
+                f"⚔️ ATK: {stats['atk']}\n"
+                f"🌟 MP: {stats['mp']}\n"
+                f"🛡️ DEF Física: {stats['def_p']}\n"
+                f"✨ DEF Mágica: {stats['def_m']}\n"
+                f"💨 Agilidad: {stats['agi']}\n"
+                f"💪 Aguante: {stats['sta']}\n"
+                f"🌺 Coral de Fuego: {stats['fire_coral']}\n\n"
+                f"📈 EXP: {stats['exp']}/{exp_needed_for_level(stats['level'])}\n"
+                f"⚔️ Batallas hoy: {stats['battles_today']}/{MAX_BATTLES_PER_DAY}"
+            )
 
-        if update.callback_query:
-            await update.callback_query.message.reply_text(
-                message,
-                parse_mode='Markdown',
-                reply_markup=reply_markup
-            )
-        else:
-            await update.message.reply_text(
-                message,
-                parse_mode='Markdown',
-                reply_markup=reply_markup
-            )
+            keyboard = [[InlineKeyboardButton("🔙 Volver", callback_data="start")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            if update.callback_query:
+                await update.callback_query.message.reply_text(
+                    message,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+            else:
+                await update.message.reply_text(
+                    message,
+                    parse_mode='Markdown',
+                    reply_markup=reply_markup
+                )
+
+        finally:
+            session.close()
 
     except Exception as e:
         logger.error(f"Error in view_combat_stats: {e}")

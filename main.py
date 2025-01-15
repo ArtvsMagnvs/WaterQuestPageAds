@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from database.models import Player
 from bot.handlers.base import initialize_new_player
+from database.db.game_db import SessionLocal, get_all_players, get_player
+from database.models.player_model import dict
 
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 
@@ -23,7 +25,7 @@ from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
 from bot.handlers.shop import premium_shop, get_premium_item, comprar_fragmentos
 
-from app import app
+from database.app import app
 
 # Import configurations and save system
 from bot.config.settings import (
@@ -130,12 +132,12 @@ async def button(update: Update, context: CallbackContext):
         try:
             await query.answer()
         except:
-            # Si el callback_query expiró, continuamos sin error
+            # If the callback_query expired, we continue without error
             pass
 
         # Get player data for menu generation
         user_id = query.from_user.id
-        player = context.bot_data.get('players', {}).get(user_id)
+        player = get_player(user_id)
 
         if player is None:
             logger.warning(f"Player data not found for user_id: {user_id}")
@@ -177,7 +179,7 @@ async def button(update: Update, context: CallbackContext):
         elif query.data == "watch_ad":
             await process_ad_watch(update, context)
         elif query.data.startswith("retry_miniboss_"):
-            combat_type = query.data.split("_")[3]  # Extraer el tipo de combate
+            combat_type = query.data.split("_")[3]  # Extract the combat type
             await retry_combat_ad(update, context, combat_type)
         elif query.data == "premium_shop":
             await premium_shop(update, context)
@@ -187,49 +189,73 @@ async def button(update: Update, context: CallbackContext):
             logger.warning(f"Unhandled callback_data: {query.data}")
             await query.message.reply_text(
                 ERROR_MESSAGES["generic_error"],
-                reply_markup=generar_botones(player)
+                reply_markup=generar_botones(player.__dict__)
             )
     except Exception as e:
         logger.error(f"Error in button handler: {e}")
         if update.callback_query and update.callback_query.message:
             await update.callback_query.message.reply_text(
                 ERROR_MESSAGES["generic_error"],
-                reply_markup=generar_botones(player if 'player' in locals() else None)
+                reply_markup=generar_botones(player.__dict__ if player else None)
             )
         elif update.message:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+    finally:
+        # Ensure the database session is closed
+        if 'session' in locals():
+            session.close()
 
 
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle errors."""
-    logger.error(f"Error occurred: {context.error}")
+async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
+    """Periodic save job."""
+    session = SessionLocal()
     try:
-        if update and update.effective_message:
-            if update.callback_query and update.callback_query.message:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
-            elif update.message:
-                await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+        players = get_all_players(session)
+        
+        if players:
+            player_data = {player.user_id: player.to_dict() for player in players}
+            save_result = save_game_data(player_data)
+            
+            if save_result:
+                logger.info("Auto-save completed successfully")
+            else:
+                logger.warning("Auto-save completed with warnings")
+        else:
+            logger.info("No player data to save")
+        
     except Exception as e:
-        logger.error(f"Error in error handler: {e}")
+        logger.error(f"Error in save game job: {e}")
+    finally:
+        session.close()
 
 async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
     """Periodic save job."""
     try:
-        if 'players' in context.bot_data:
-            save_game_data(context.bot_data['players'])
-            logger.info("Auto-save completed")
+        session = SessionLocal()
+        players = get_all_players(session)
+        
+        if players:
+            player_data = {player.user_id: player.to_dict() for player in players}
+            save_result = save_game_data(player_data)
+            
+            if save_result:
+                logger.info("Auto-save completed successfully")
+            else:
+                logger.warning("Auto-save completed with warnings")
+        else:
+            logger.info("No player data to save")
+        
     except Exception as e:
         logger.error(f"Error in save game job: {e}")
+    finally:
+        session.close()
 
 def main():
     """Start the bot."""
     try:
         # Create application
         application = Application.builder().token(TOKEN).build()
-
-        # Initialize players data
-        application.bot_data['players'] = load_game_data()
 
         # Add command handlers
         application.add_handler(CommandHandler("start", start))
@@ -290,11 +316,30 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\nBot detenido manualmente")
     finally:
-        # Save data on shutdown if application was created
-        if app and hasattr(app, 'bot_data') and 'players' in app.bot_data:
-            save_game_data(app.bot_data['players'])
-            backup_data(app.bot_data['players'])
-            print("Datos guardados. ¡Hasta luego!")
+        if app:
+            try:
+                session = SessionLocal()
+                players = get_all_players(session)
+                if players:
+                    player_data = {player.user_id: player.to_dict() for player in players}
+                    save_result = save_game_data(player_data)
+                    if save_result:
+                        print("Datos guardados exitosamente.")
+                    else:
+                        print("Advertencia: Hubo un problema al guardar los datos.")
+                    
+                    backup_file = backup_data()
+                    if backup_file:
+                        print(f"Backup creado: {backup_file}")
+                    else:
+                        print("Advertencia: No se pudo crear el backup.")
+                else:
+                    print("No hay datos de jugadores para guardar.")
+            except Exception as e:
+                print(f"Error al guardar los datos: {e}")
+            finally:
+                session.close()
+                print("¡Hasta luego!")
 
 
 

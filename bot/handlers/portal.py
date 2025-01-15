@@ -15,7 +15,7 @@ from bot.config.settings import (
     MAX_ENERGY
 )
 from bot.utils.keyboard import generar_botones
-from bot.utils.save_system import save_game_data
+from database.db.game_db import Session, get_player, save_player
 from bot.handlers.shop import comprar_fragmentos
 
 
@@ -161,66 +161,71 @@ async def portal_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Display Portal of Tides menu."""
     try:
         user_id = update.effective_user.id
-        if user_id not in context.bot_data.get('players', {}):
+        session = Session()
+        try:
+            player = get_player(session, user_id)
+            if not player:
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                else:
+                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                return
+            
+            # Verifica si 'portal_stats' existe, si no lo inicializa
+            if 'portal_stats' not in player.extra_data:
+                player.extra_data['portal_stats'] = {
+                    'total_spins': 0,
+                    'spins_since_legendary': 0,
+                    'spins_since_epic': 0,
+                    'spins_since_rare': 0
+                }
+                save_player(session, player)
+
+            tickets = player.premium_features.get('tickets', 0)
+            
+            mensaje = (
+                "🌊 Portal de las Mareas 🌊\n\n"
+                "Usa tus Fragmentos de Destino para obtener recompensas:\n\n"
+                "🌟 Legendario: 1%\n"
+                "💫 Épico: 5%\n"
+                "✨ Raro: 14%\n"
+                "🌊 Común: 80%\n\n"
+                f"💎 WaterShards obtenidos: {player.watershard} WTR\n"
+                f"🎫 Fragmentos disponibles: {tickets}\n\n"
+                f"🎲 Giros totales: {player.extra_data['portal_stats']['total_spins']}\n"
+                f"⭐ Giros hasta legendario garantizado: {PITY_SYSTEM['legendary_pity'] - player.extra_data['portal_stats']['spins_since_legendary']}\n"
+                f"💫 Giros hasta épico garantizado: {PITY_SYSTEM['epic_pity'] - player.extra_data['portal_stats']['spins_since_epic']} giros\n"
+                f"✨ Giros hasta raro garantizado: {PITY_SYSTEM['rare_pity'] - player.extra_data['portal_stats']['spins_since_rare']} giros"
+            )
+            
+            # Botón para abrir el portal si tiene tickets suficientes
+            keyboard = []
+            if tickets >= 1:
+                keyboard.append([InlineKeyboardButton("🌊 Abrir Portal (1 Fragmento)", callback_data="portal_spin_1")])
+            if tickets >= 10:
+                keyboard.append([InlineKeyboardButton("🌟 10 Aperturas (Raro+ garantizado)", callback_data="portal_spin_10")])
+
+            # Este botón siempre estará activo en el menú
+            keyboard.append([InlineKeyboardButton("🛒 Comprar Fragmentos de Destino", callback_data="buy_tickets")])
+
+            # Opción para volver al menú principal
+            keyboard.append([InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")])
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
             if update.callback_query:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                try:
+                    # Intenta editar el mensaje existente
+                    await update.callback_query.message.edit_text(mensaje, reply_markup=reply_markup)
+                except Exception as edit_error:
+                    # Si falla, manda un nuevo mensaje
+                    logger.warning(f"Could not edit message, sending new one: {edit_error}")
+                    await update.callback_query.message.reply_text(mensaje, reply_markup=reply_markup)
             else:
-                await update.message.reply_text(ERROR_MESSAGES["no_game"])
-            return
-        
-        player = context.bot_data['players'][user_id]
-        
-        # Verifica si 'portal_stats' existe, si no lo inicializa
-        if 'portal_stats' not in player:
-            player['portal_stats'] = {
-                'total_spins': 0,
-                'spins_since_legendary': 0,
-                'spins_since_epic': 0,
-                'spins_since_rare': 0
-            }
-
-        tickets = player.get('premium_features', {}).get('tickets', 0)
-        
-        mensaje = (
-            "🌊 Portal de las Mareas 🌊\n\n"
-            "Usa tus Fragmentos de Destino para obtener recompensas:\n\n"
-            "🌟 Legendario: 1%\n"
-            "💫 Épico: 5%\n"
-            "✨ Raro: 14%\n"
-            "🌊 Común: 80%\n\n"
-            f"💎 WaterShards obtenidos: {player.get('watershard', 0)} WTR\n"
-            f"🎫 Fragmentos disponibles: {tickets}\n\n"
-            f"🎲 Giros totales: {player['portal_stats']['total_spins']}\n"
-            f"⭐ Giros hasta legendario garantizado: {PITY_SYSTEM['legendary_pity'] - player['portal_stats']['spins_since_legendary']}\n"
-            f"💫 Giros hasta épico garantizado: {PITY_SYSTEM['epic_pity'] - player['portal_stats']['spins_since_epic']} giros\n"
-            f"✨ Giros hasta raro garantizado: {PITY_SYSTEM['rare_pity'] - player['portal_stats']['spins_since_rare']} giros"
-        )
-        
-        # Botón para abrir el portal si tiene tickets suficientes
-        keyboard = []
-        if tickets >= 1:
-            keyboard.append([InlineKeyboardButton("🌊 Abrir Portal (1 Fragmento)", callback_data="portal_spin_1")])
-        if tickets >= 10:
-            keyboard.append([InlineKeyboardButton("🌟 10 Aperturas (Raro+ garantizado)", callback_data="portal_spin_10")])
-
-        # Este botón siempre estará activo en el menú
-        keyboard.append([InlineKeyboardButton("🛒 Comprar Fragmentos de Destino", callback_data="buy_tickets")])
-
-        # Opción para volver al menú principal
-        keyboard.append([InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")])
-        
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        if update.callback_query:
-            try:
-                # Intenta editar el mensaje existente
-                await update.callback_query.message.edit_text(mensaje, reply_markup=reply_markup)
-            except Exception as edit_error:
-                # Si falla, manda un nuevo mensaje
-                logger.warning(f"Could not edit message, sending new one: {edit_error}")
-                await update.callback_query.message.reply_text(mensaje, reply_markup=reply_markup)
-        else:
-            await update.message.reply_text(mensaje, reply_markup=reply_markup)
+                await update.message.reply_text(mensaje, reply_markup=reply_markup)
+                
+        finally:
+            session.close()
             
     except Exception as e:
         logger.error(f"Error in portal_menu: {e}")
@@ -237,98 +242,106 @@ async def spin_portal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle portal spinning."""
     try:
         user_id = update.effective_user.id
-        player = context.bot_data['players'][user_id]
-        
-        # Check if multi-spin
-        is_multi = update.callback_query.data == "portal_spin_10"
-        tickets_needed = 10 if is_multi else 1
-        
-        # Check tickets
-        if player.get('premium_features', {}).get('tickets', 0) < tickets_needed:
-            await update.callback_query.message.reply_text(PORTAL_MESSAGES["no_tickets"])
-            return
+        session = Session()
+        try:
+            player = get_player(session, user_id)
+            if not player:
+                await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                return
 
-        # Animation message
-        message = await update.callback_query.message.reply_text(PORTAL_MESSAGES["opening"])
-        
-        rewards = []
-        for _ in range(tickets_needed):
-            # Update pity counters
-            player['portal_stats']['total_spins'] += 1
-            player['portal_stats']['spins_since_legendary'] += 1
-            player['portal_stats']['spins_since_epic'] += 1
-            player['portal_stats']['spins_since_rare'] += 1
+            # Check if multi-spin
+            is_multi = update.callback_query.data == "portal_spin_10"
+            tickets_needed = 10 if is_multi else 1
+            
+            # Check tickets
+            if player.premium_features.get('tickets', 0) < tickets_needed:
+                await update.callback_query.message.reply_text(PORTAL_MESSAGES["no_tickets"])
+                return
 
-            # Check pity system
-            if player['portal_stats']['spins_since_legendary'] >= PITY_SYSTEM['legendary_pity']:
-                rarity = "legendary"
-            elif player['portal_stats']['spins_since_epic'] >= PITY_SYSTEM['epic_pity'] and is_multi:
-                rarity = "epic"
-            elif player['portal_stats']['spins_since_rare'] >= PITY_SYSTEM['rare_pity'] and is_multi:
-                rarity = "rare"
-            else:
-                rarity = random.choices(
-                    list(RARITY_CHANCES.keys()),
-                    list(RARITY_CHANCES.values())
-                )[0]
+            # Animation message
+            message = await update.callback_query.message.reply_text(PORTAL_MESSAGES["opening"])
+            
+            rewards = []
+            for _ in range(tickets_needed):
+                # Update pity counters
+                player.portal_stats['total_spins'] += 1
+                player.portal_stats['spins_since_legendary'] += 1
+                player.portal_stats['spins_since_epic'] += 1
+                player.portal_stats['spins_since_rare'] += 1
 
-            # Reset appropriate pity counters
-            if rarity == "legendary":
-                player['portal_stats']['spins_since_legendary'] = 0
-                player['portal_stats']['spins_since_epic'] = 0
-                player['portal_stats']['spins_since_rare'] = 0
-            elif rarity == "epic":
-                player['portal_stats']['spins_since_epic'] = 0
-                player['portal_stats']['spins_since_rare'] = 0
-            elif rarity == "rare":
-                player['portal_stats']['spins_since_rare'] = 0
+                # Check pity system
+                if player.portal_stats['spins_since_legendary'] >= PITY_SYSTEM['legendary_pity']:
+                    rarity = "legendary"
+                elif player.portal_stats['spins_since_epic'] >= PITY_SYSTEM['epic_pity'] and is_multi:
+                    rarity = "epic"
+                elif player.portal_stats['spins_since_rare'] >= PITY_SYSTEM['rare_pity'] and is_multi:
+                    rarity = "rare"
+                else:
+                    rarity = random.choices(
+                        list(RARITY_CHANCES.keys()),
+                        list(RARITY_CHANCES.values())
+                    )[0]
 
-            # Select reward from rarity pool
-            possible_rewards = PORTAL_REWARDS[rarity]["rewards"]
-            weights = [r["weight"] for r in possible_rewards]
-            reward = random.choices(possible_rewards, weights=weights)[0]
-            rewards.append((rarity, reward))
+                # Reset appropriate pity counters
+                if rarity == "legendary":
+                    player.portal_stats['spins_since_legendary'] = 0
+                    player.portal_stats['spins_since_epic'] = 0
+                    player.portal_stats['spins_since_rare'] = 0
+                elif rarity == "epic":
+                    player.portal_stats['spins_since_epic'] = 0
+                    player.portal_stats['spins_since_rare'] = 0
+                elif rarity == "rare":
+                    player.portal_stats['spins_since_rare'] = 0
 
-            # Animation
-            for spin_message in PORTAL_MESSAGES["spinning"]:
-                await message.edit_text(spin_message)
-                await asyncio.sleep(0.5)
+                # Select reward from rarity pool
+                possible_rewards = PORTAL_REWARDS[rarity]["rewards"]
+                weights = [r["weight"] for r in possible_rewards]
+                reward = random.choices(possible_rewards, weights=weights)[0]
+                rewards.append((rarity, reward))
 
-            # Apply reward
-            if reward["type"] == "gold":
-                player["mascota"]["oro"] += reward["value"]
-            elif reward["type"] == "coral":
-                player["combat_stats"]["fire_coral"] += reward["value"]
-            elif reward["type"] == "energy":
-                player["mascota"]["energia"] = min(MAX_ENERGY, player["mascota"]["energia"] + reward["value"])
-            elif reward["type"] == "food":
-                player["comida"] += reward["value"]
-            elif reward["type"] == "gold_boost":
-                player["mascota"]["oro_hora"] *= (1 + reward["value"])
-            elif reward["type"] == "combat_boost":
-                player["combat_stats"]["battles_today"] = max(0, player["combat_stats"]["battles_today"] - reward["value"])
-            elif reward["type"] == "premium_status":
-                if not player['premium_features'].get('premium_status'):
-                    player['premium_features']['premium_status'] = True
-                    player['premium_features']['premium_status_expires'] = datetime.now().timestamp() + (reward["value"] * 24 * 60 * 60)
-            elif reward["type"] == "watershard":
-                if 'watershard' not in player:
-                    player['watershard'] = 0
-                player['watershard'] += reward["value"]
+                # Animation
+                for spin_message in PORTAL_MESSAGES["spinning"]:
+                    await message.edit_text(spin_message)
+                    await asyncio.sleep(0.5)
 
-        # Deduct tickets
-        player['premium_features']['tickets'] -= tickets_needed
-        
-        # Save changes
-        save_game_data(context.bot_data['players'])
+                # Apply reward
+                if reward["type"] == "gold":
+                    player.mascota['oro'] += reward["value"]
+                elif reward["type"] == "coral":
+                    player.combat_stats['fire_coral'] += reward["value"]
+                elif reward["type"] == "energy":
+                    player.mascota['energia'] = min(MAX_ENERGY, player.mascota['energia'] + reward["value"])
+                elif reward["type"] == "food":
+                    player.comida += reward["value"]
+                elif reward["type"] == "gold_boost":
+                    player.mascota['oro_hora'] *= (1 + reward["value"])
+                elif reward["type"] == "combat_boost":
+                    player.combat_stats['battles_today'] = max(0, player.combat_stats['battles_today'] - reward["value"])
+                elif reward["type"] == "premium_status":
+                    if not player.premium_features.get('premium_status'):
+                        player.premium_features['premium_status'] = True
+                        player.premium_features['premium_status_expires'] = datetime.now().timestamp() + (reward["value"] * 24 * 60 * 60)
+                elif reward["type"] == "watershard":
+                    if not hasattr(player, 'watershard'):
+                        player.watershard = 0
+                    player.watershard += reward["value"]
 
-        # Show rewards
-        rewards_message = f"{PORTAL_MESSAGES[rewards[0][0]]}\n\n"
-        for rarity, reward in rewards:
-            rewards_message += f"{reward['name']}\n"
+            # Deduct tickets
+            player.premium_features['tickets'] -= tickets_needed
 
-        await message.edit_text(rewards_message)
-        await portal_menu(update, context)
+            # Save changes
+            save_player(session, player)
+
+            # Show rewards
+            rewards_message = f"{PORTAL_MESSAGES[rewards[0][0]]}\n\n"
+            for rarity, reward in rewards:
+                rewards_message += f"{reward['name']}\n"
+
+            await message.edit_text(rewards_message)
+            await portal_menu(update, context)
+
+        finally:
+            session.close()
 
     except Exception as e:
         logger.error(f"Error in spin_portal: {e}")
