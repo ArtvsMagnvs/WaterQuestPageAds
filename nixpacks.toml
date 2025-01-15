@@ -1,0 +1,4 @@
+[system.packages]
+libpq-dev = "15.3"
+gcc = "13.2.0"
+python3-dev = "3.12.0"
