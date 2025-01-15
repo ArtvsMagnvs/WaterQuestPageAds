@@ -1,10 +1,13 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from database.models.player_model import Base, Player
 import os
-
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+ 
 # Database configuration for Railway PostgreSQL
 db_url = os.environ.get('DATABASE_URL')
+
+if db_url is None:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
