@@ -10,10 +10,10 @@ from telegram.ext import (
 )
 
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine
-from database.models import Player
+from database import SessionLocal, get_all_players, engine
 from bot.handlers.base import initialize_new_player
 from database.db.game_db import SessionLocal, get_all_players, get_player
+from database.models.player_model import Player
 from database.models.player_model import dict
 
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
@@ -207,27 +207,8 @@ async def button(update: Update, context: CallbackContext):
 
 
 
-async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
-    """Periodic save job."""
-    session = SessionLocal()
-    try:
-        players = get_all_players(session)
-        
-        if players:
-            player_data = {player.user_id: player.to_dict() for player in players}
-            save_result = save_game_data(player_data)
-            
-            if save_result:
-                logger.info("Auto-save completed successfully")
-            else:
-                logger.warning("Auto-save completed with warnings")
-        else:
-            logger.info("No player data to save")
-        
-    except Exception as e:
-        logger.error(f"Error in save game job: {e}")
-    finally:
-        session.close()
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
     """Periodic save job."""
@@ -268,8 +249,13 @@ def main():
         # Add error handler
         application.add_error_handler(error_handler)
 
-        # Add premmium items
+        # Add premium items
         application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
+
+        # Add WaterQuest handlers
+        #application.add_handler(CallbackQueryHandler(show_waterquest_menu, pattern=r'^waterquest_menu$'))
+        #application.add_handler(CallbackQueryHandler(start_voice_of_abyss_quest, pattern=r'^start_voice_of_abyss$'))
+        #application.add_handler(CallbackQueryHandler(process_quest_choice, pattern=r'^quest_choice_'))
 
         # Add periodic jobs
         application.job_queue.run_repeating(
@@ -283,7 +269,7 @@ def main():
             check_weekly_tickets,
             interval=86400,  # Check daily
             first=10
-)
+        )
 
         # Add premium expiry check
         application.job_queue.run_repeating(
