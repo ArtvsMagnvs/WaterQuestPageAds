@@ -54,9 +54,6 @@ async def verify_ad_view(ad_id: str) -> bool:
         # We trust Monetag to handle verification
         return True
 
-
-from database.db.game_db import get_player, Session
-
 async def ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra el menú de anuncios con el progreso actual."""
     user_id = update.callback_query.from_user.id
@@ -97,8 +94,6 @@ async def ads_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     finally:
         session.close()
-
-from database.db.game_db import get_player, update_player, Session
 
 async def process_ad_watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.callback_query.from_user.id

@@ -9,13 +9,13 @@ from telegram.ext import ContextTypes
 from sqlalchemy.orm import Session
 
 # Local imports
-from database.db.game_db import Session, get_player, save_player, get_all_players
+from database.db.game_db import Session, get_player, save_player, update_player, get_all_players
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.config.shop_items import SHOP_ITEMS, PREMIUM_SHOP_ITEMS, ShopManager
 from bot.config.premium_settings import PREMIUM_FEATURES
 from bot.config.ton_config import TON_CONFIG
 from bot.utils.keyboard import generar_botones
-from bot.utils.save_system import update_player
+
 
 #---------------------------------------------------------------
 # Temporarily comment out TON SDK imports

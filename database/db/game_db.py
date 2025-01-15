@@ -50,3 +50,23 @@ def get_all_players():
         return players
     finally:
         session.close()
+
+def update_player(user_id, update_data):
+    session = Session()
+    try:
+        player = session.query(Player).filter_by(id=user_id).first()
+        if player:
+            for key, value in update_data.items():
+                if hasattr(player, key):
+                    setattr(player, key, value)
+                else:
+                    raise AttributeError(f"Player object has no attribute '{key}'")
+            session.commit()
+            return player
+        else:
+            return None
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()

@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from .db.game_db import db_url, Base, engine
 
-from db import Database
+from .db.game_db import Session as Database
 import os
 from dotenv import load_dotenv
 

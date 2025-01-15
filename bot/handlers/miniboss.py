@@ -16,8 +16,11 @@ from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
 from bot.handlers.ads import retry_combat_ad
-from database.db.game_db import get_player, save_player
+
 from bot.utils.save_system import initialize_new_player
+
+from database.db.game_db import Session, get_player, save_player, update_player
+from bot.handlers.ads import retry_combat_ad
 
 # Store active miniboss battles
 miniboss_estado = {}
@@ -317,8 +320,7 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
         else:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
 
-from database.db.game_db import Session, get_player, save_player
-from bot.handlers.ads import retry_combat_ad
+
 
 async def retry_miniboss_battle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle miniboss battle retry through ad watching."""

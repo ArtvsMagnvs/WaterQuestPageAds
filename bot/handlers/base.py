@@ -9,6 +9,7 @@ from datetime import datetime
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
+from database.db.game_db import get_player, create_player, Session
 
 # Import other handlers
 from bot.handlers.combat import quick_combat
@@ -62,8 +63,6 @@ def initialize_new_player():
             "lucky_tickets": 0
         }
     }
-
-from database.db.game_db import get_player, create_player, Session
 
 from database.db.game_db import get_player, create_player, Session
 
@@ -186,8 +185,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown',
             reply_markup=generar_botones()
         )
-
-from database.db.game_db import get_player, Session
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show detailed player statistics."""
