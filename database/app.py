@@ -1,7 +1,8 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from database.models.player_model import Base
 import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
 
 app = Flask(__name__)
 
@@ -16,9 +17,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
+# Create engine and session
+engine = create_engine(db_url)
+Session = sessionmaker(bind=engine)
+
 # Ensure the database tables are created
 with app.app_context():
-    Base.metadata.create_all(db.engine)
+    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)
