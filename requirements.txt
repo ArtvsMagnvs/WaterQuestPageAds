@@ -1,3 +1,4 @@
+psycopg2-binary==2.9.5
 -r requirements-bot.txt
 -r requirements-web.txt
 -r requirements-ton.txt
