@@ -6,5 +6,5 @@ SQLAlchemy==1.4.46
 alembic==1.9.1
 psycopg2-binary==2.9.5
 SQLAlchemy-Utils==0.39.0
-python-dotenv==0.21.0
+python-dotenv==1.0.0
 Flask-SQLAlchemy==3.0.3
