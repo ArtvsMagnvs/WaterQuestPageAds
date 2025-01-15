@@ -6,10 +6,17 @@ from flask import Flask
 
 app = Flask(__name__)
 
-# Database configuration for Railway PostgreSQL
+# Database configuration
 db_url = os.environ.get('DATABASE_URL')
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+if db_url is None:
+    # Fallback to a local SQLite database if DATABASE_URL is not set
+    db_url = 'sqlite:///local_development.db'
+    print("WARNING: DATABASE_URL is not set. Using a local SQLite database.")
+else:
+    # Ensure the URL uses the correct protocol
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
