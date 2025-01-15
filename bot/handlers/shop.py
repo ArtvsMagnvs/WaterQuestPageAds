@@ -1,25 +1,21 @@
 # handlers/shop.py
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
+# Standard library imports
 import logging
 
+# Third-party imports
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
 from sqlalchemy.orm import Session
-from bot.database.models.player_model import Player
 
-
+# Local imports
+from database.db.game_db import Session, get_player, save_player, get_all_players
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.config.shop_items import SHOP_ITEMS, PREMIUM_SHOP_ITEMS, ShopManager
-from bot.utils.keyboard import generar_botones
-from bot.utils.save_system import (
-    Session,
-    save_game_data, 
-    save_player, 
-    get_player, 
-    get_all_players,
-    update_player  
-)
 from bot.config.premium_settings import PREMIUM_FEATURES
+from bot.config.ton_config import TON_CONFIG
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import update_player
 
 #---------------------------------------------------------------
 # Temporarily comment out TON SDK imports

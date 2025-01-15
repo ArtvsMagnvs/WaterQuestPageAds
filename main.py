@@ -9,6 +9,7 @@ from telegram.ext import (
     CallbackContext
 )
 
+from database import Session, get_all_players, get_player
 from sqlalchemy.orm import Session
 from database import SessionLocal, get_all_players, engine
 from bot.handlers.base import initialize_new_player

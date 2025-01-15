@@ -1,5 +1,14 @@
 # WaterQuest/__init__.py
 
+import asyncio
+import logging
+from aiogram import Bot, Dispatcher
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.types import ParseMode
+from bot.config import config
+from bot.handlers import register_handlers
+from database.db import Database
+
 """
 WaterQuest - Telegram Bot Game
 A pet-raising and combat game with premium features and progression systems.

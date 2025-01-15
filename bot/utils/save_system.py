@@ -1,10 +1,13 @@
 from database.models.player_model import Player
-from database.db.game_db import Session, get_player, save_player, create_player, get_all_players
+from database.db.game_db import Session, get_player, create_player, get_all_players
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 import json
 import os
 import logging
+
+from database import Session, get_player, create_player,  get_all_players
+
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)

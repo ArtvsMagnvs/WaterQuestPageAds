@@ -1,6 +1,10 @@
-from flask import Flask
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from .db import db_url, Base, engine
+from .db.game_db import db_url, Base, engine
+
+from db import Database
+import os
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 

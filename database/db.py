@@ -2,6 +2,12 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+import psycopg2
+from psycopg2 import sql
+import os
+from dotenv import load_dotenv
+import json
+from datetime import datetime
 
 # Database configuration
 db_url = os.environ.get('DATABASE_URL')
