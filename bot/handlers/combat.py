@@ -6,7 +6,7 @@ import random
 from datetime import datetime
 import logging
 from database.db.game_db import Session, Player
-from bot.utils.save_system import save_player
+from database.db import save_player
 
 from bot.config.settings import (
     SUCCESS_MESSAGES, 
