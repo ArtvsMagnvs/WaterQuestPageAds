@@ -173,29 +173,25 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
         else:
             await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
 
-async def check_daily_reset(context: ContextTypes.DEFAULT_TYPE):
-    """Background task to check and reset daily rewards."""
+async def check_daily_reset():
     try:
-        cet = pytz.timezone('CET')
-        current_time = datetime.now(cet)
+        players = get_all_players()
+        current_date = datetime.now().date()
+        
+        for player in players:
+            if player.last_daily_claim != current_date:
+                player.daily_reward_claimed = False
+                player.last_daily_claim = None
+                # Reset any other daily-based attributes here
         
         session = Session()
-        try:
-            players = session.query(Player).all()
-            
-            for player in players:
-                if player.daily_reward:
-                    last_claim_dt = datetime.fromtimestamp(player.daily_reward['last_claim'], cet)
-                    yesterday = (current_time - timedelta(days=1)).date()
-                    
-                    if last_claim_dt.date() < yesterday:
-                        player.daily_reward['streak'] = 1
-            
-            session.commit()
-        finally:
-            session.close()
+        session.bulk_save_objects(players)
+        session.commit()
     except Exception as e:
         logger.error(f"Error in daily reset check: {e}")
+    finally:
+        if 'session' in locals():
+            session.close()
 
 async def check_weekly_tickets(context: ContextTypes.DEFAULT_TYPE):
     """Check and distribute weekly tickets"""

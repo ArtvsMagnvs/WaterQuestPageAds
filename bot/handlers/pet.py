@@ -21,6 +21,7 @@ from bot.config.settings import (
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +264,7 @@ async def check_premium_expiry(context: ContextTypes.DEFAULT_TYPE):
         current_time = time.time()
         session = Session()
         try:
-            players = get_all_players(session)
+            players = get_all_players()
             
             for player in players:
                 premium_features = player.premium_features
