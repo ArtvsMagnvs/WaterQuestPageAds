@@ -9,6 +9,8 @@ from telegram.ext import (
     CallbackContext
 )
 
+import logging
+
 from database import Session, get_all_players, get_player
 from bot.handlers.base import initialize_new_player
 from database.models.player_model import Player
@@ -72,7 +74,7 @@ from bot.handlers.ads import (
     retry_combat_ad
 )
 
-
+logging.basicConfig(level=logging.DEBUG)
 
 
 async def start(update: Update, context: CallbackContext):
@@ -233,7 +235,7 @@ def main():
     """Start the bot."""
     try:
         # Create application
-        application = Application.builder().token(TOKEN).build()
+        application = Application.builder().token(TOKEN).connect_timeout(30).read_timeout(30).build()
 
         # Add command handlers
         application.add_handler(CommandHandler("start", start))
