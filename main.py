@@ -10,12 +10,8 @@ from telegram.ext import (
 )
 
 from database import Session, get_all_players, get_player
-from sqlalchemy.orm import Session
-from database import Session, get_all_players, engine
 from bot.handlers.base import initialize_new_player
-from database.db.game_db import Session, get_all_players, get_player
 from database.models.player_model import Player
-from database.models.player_model import dict
 
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 
@@ -85,7 +81,7 @@ async def start(update: Update, context: CallbackContext):
         user_id = update.effective_user.id
         
         # Create a new database session
-        session: Session = SessionLocal()
+        session: Session = Session()
 
         try:
             # Check if player exists in the database
@@ -214,7 +210,7 @@ logger = logging.getLogger(__name__)
 async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
     """Periodic save job."""
     try:
-        session = SessionLocal()
+        session = Session()
         players = get_all_players(session)
         
         if players:
@@ -305,7 +301,7 @@ if __name__ == '__main__':
     finally:
         if app:
             try:
-                session = SessionLocal()
+                session = Session()
                 players = get_all_players(session)
                 if players:
                     player_data = {player.user_id: player.to_dict() for player in players}
