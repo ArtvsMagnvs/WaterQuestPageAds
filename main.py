@@ -16,6 +16,7 @@ from bot.handlers.base import initialize_new_player
 from database.models.player_model import Player
 
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
+from bot.handlers.daily import setup_daily_handlers, check_daily_reset, check_weekly_tickets
 
 import logging
 import asyncio
@@ -83,7 +84,7 @@ async def start(update: Update, context: CallbackContext):
         user_id = update.effective_user.id
         
         # Create a new database session
-        session: Session = Session()
+        session = Session()
 
         try:
             # Check if player exists in the database
@@ -247,6 +248,8 @@ def main():
         
         # Add error handler
         application.add_error_handler(error_handler)
+
+        setup_daily_handlers(application)
 
         # Add premium items
         application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))

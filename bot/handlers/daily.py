@@ -18,6 +18,7 @@ from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
 from database.db.game_db import Session
 from database.models import Player
+from sqlalchemy import cast, String
 
 def get_next_midnight_cet():
     cet = pytz.timezone('CET')
@@ -173,25 +174,29 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
         else:
             await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
 
-async def check_daily_reset():
+async def check_daily_reset(context: ContextTypes.DEFAULT_TYPE):
+    """Background task to check and reset daily rewards."""
     try:
-        players = get_all_players()
-        current_date = datetime.now().date()
-        
-        for player in players:
-            if player.last_daily_claim != current_date:
-                player.daily_reward_claimed = False
-                player.last_daily_claim = None
-                # Reset any other daily-based attributes here
+        cet = pytz.timezone('CET')
+        current_time = datetime.now(cet)
         
         session = Session()
-        session.bulk_save_objects(players)
-        session.commit()
+        try:
+            players = session.query(Player).all()
+            
+            for player in players:
+                if player.daily_reward:
+                    last_claim_dt = datetime.fromtimestamp(player.daily_reward['last_claim'], cet)
+                    yesterday = (current_time - timedelta(days=1)).date()
+                    
+                    if last_claim_dt.date() < yesterday:
+                        player.daily_reward['streak'] = 1
+            
+            session.commit()
+        finally:
+            session.close()
     except Exception as e:
         logger.error(f"Error in daily reset check: {e}")
-    finally:
-        if 'session' in locals():
-            session.close()
 
 async def check_weekly_tickets(context: ContextTypes.DEFAULT_TYPE):
     """Check and distribute weekly tickets"""
@@ -199,7 +204,9 @@ async def check_weekly_tickets(context: ContextTypes.DEFAULT_TYPE):
     
     session = Session()
     try:
-        players = session.query(Player).filter(Player.premium_features['premium_status'].astext == 'true').all()
+        players = session.query(Player).filter(
+            cast(Player.premium_features['premium_status'], String) == 'true'
+        ).all()
         
         for player in players:
             premium_features = player.premium_features
