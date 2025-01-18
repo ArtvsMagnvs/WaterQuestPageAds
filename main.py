@@ -11,9 +11,9 @@ from telegram.ext import (
 
 from database import Session, get_all_players, get_player
 from sqlalchemy.orm import Session
-from database import SessionLocal, get_all_players, engine
+from database import Session, get_all_players, engine
 from bot.handlers.base import initialize_new_player
-from database.db.game_db import SessionLocal, get_all_players, get_player
+from database.db.game_db import Session, get_all_players, get_player
 from database.models.player_model import Player
 from database.models.player_model import dict
 
