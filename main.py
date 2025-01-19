@@ -9,7 +9,7 @@ from telegram.ext import (
     CallbackContext
 )
 
-import logging
+
 
 from database import Session, get_all_players, get_player
 from bot.handlers.base import initialize_new_player
@@ -18,6 +18,8 @@ from database.models.player_model import Player
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.handlers.daily import setup_daily_handlers, check_daily_reset, check_weekly_tickets
 
+from datetime import time
+from zoneinfo import ZoneInfo
 import logging
 import asyncio
 from datetime import datetime
@@ -259,6 +261,10 @@ def main():
         #application.add_handler(CallbackQueryHandler(start_voice_of_abyss_quest, pattern=r'^start_voice_of_abyss$'))
         #application.add_handler(CallbackQueryHandler(process_quest_choice, pattern=r'^quest_choice_'))
 
+        job_time = time(hour=0, minute=0, tzinfo=ZoneInfo("Europe/Paris"))
+
+        application.job_queue.run_daily(check_daily_reset, time=job_time)
+        
         # Add periodic jobs
         application.job_queue.run_repeating(
             save_game_job,
