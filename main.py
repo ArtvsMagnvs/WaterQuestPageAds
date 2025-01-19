@@ -19,7 +19,7 @@ from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.handlers.daily import setup_daily_handlers, check_daily_reset, check_weekly_tickets
 
 from datetime import time
-from zoneinfo import ZoneInfo
+import zoneinfo
 import logging
 import asyncio
 from datetime import datetime
@@ -264,7 +264,7 @@ def main():
         job_time = time(hour=0, minute=0, tzinfo=ZoneInfo("Europe/Paris"))
 
         application.job_queue.run_daily(check_daily_reset, time=job_time)
-        
+
         # Add periodic jobs
         application.job_queue.run_repeating(
             save_game_job,
