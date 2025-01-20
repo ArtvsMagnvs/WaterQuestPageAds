@@ -262,73 +262,78 @@ async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Start the bot."""
+    lock = FileLock("bot.lock")
     try:
-        # Create application
-        application = Application.builder().token(TOKEN).connect_timeout(30).read_timeout(30).build()
+        with lock.acquire(timeout=1):
+            # Create application
+            application = Application.builder().token(TOKEN).connect_timeout(30).read_timeout(30).build()
 
-        # Add command handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("stats", stats_command))
-        
-        # Add callback query handler
-        application.add_handler(CallbackQueryHandler(button))
-        
-        # Add error handler
-        application.add_error_handler(error_handler)
+            # Add command handlers
+            application.add_handler(CommandHandler("start", start))
+            application.add_handler(CommandHandler("help", help_command))
+            application.add_handler(CommandHandler("stats", stats_command))
+            
+            # Add callback query handler
+            application.add_handler(CallbackQueryHandler(button))
+            
+            # Add error handler
+            application.add_error_handler(error_handler)
 
-        setup_daily_handlers(application)
+            setup_daily_handlers(application)
 
-        # Add premium items
-        application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
+            # Add premium items
+            application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
 
-        # Add WaterQuest handlers
-        #application.add_handler(CallbackQueryHandler(show_waterquest_menu, pattern=r'^waterquest_menu$'))
-        #application.add_handler(CallbackQueryHandler(start_voice_of_abyss_quest, pattern=r'^start_voice_of_abyss$'))
-        #application.add_handler(CallbackQueryHandler(process_quest_choice, pattern=r'^quest_choice_'))
+            # Add WaterQuest handlers
+            #application.add_handler(CallbackQueryHandler(show_waterquest_menu, pattern=r'^waterquest_menu$'))
+            #application.add_handler(CallbackQueryHandler(start_voice_of_abyss_quest, pattern=r'^start_voice_of_abyss$'))
+            #application.add_handler(CallbackQueryHandler(process_quest_choice, pattern=r'^quest_choice_'))
 
-        job_time = time(hour=0, minute=0)
-        cet = pytz.timezone('Europe/Paris')
+            job_time = time(hour=0, minute=0)
+            cet = pytz.timezone('Europe/Paris')
 
-        application.job_queue.run_daily(check_daily_reset, time=job_time.replace(tzinfo=cet))
+            application.job_queue.run_daily(check_daily_reset, time=job_time.replace(tzinfo=cet))
 
-        utc_time = cet.localize(datetime.combine(datetime.now(cet), job_time)).astimezone(pytz.UTC).time()
-        application.job_queue.run_daily(check_daily_reset, time=utc_time)
+            utc_time = cet.localize(datetime.combine(datetime.now(cet), job_time)).astimezone(pytz.UTC).time()
+            application.job_queue.run_daily(check_daily_reset, time=utc_time)
 
-        # Add periodic jobs
-        application.job_queue.run_repeating(
-            save_game_job,
-            interval=300,  # Every 5 minutes
-            first=300
-        )
+            # Add periodic jobs
+            application.job_queue.run_repeating(
+                save_game_job,
+                interval=300,  # Every 5 minutes
+                first=300
+            )
 
-        # Add weekly ticket check job
-        application.job_queue.run_repeating(
-            check_weekly_tickets,
-            interval=86400,  # Check daily
-            first=10
-        )
+            # Add weekly ticket check job
+            application.job_queue.run_repeating(
+                check_weekly_tickets,
+                interval=86400,  # Check daily
+                first=10
+            )
 
-        # Add premium expiry check
-        application.job_queue.run_repeating(
-            check_premium_expiry,
-            interval=3600,  # Every hour
-            first=10
-        )
+            # Add premium expiry check
+            application.job_queue.run_repeating(
+                check_premium_expiry,
+                interval=3600,  # Every hour
+                first=10
+            )
 
-        # Add daily reset check
-        application.job_queue.run_repeating(
-            check_daily_reset,
-            interval=21600,  # Every 6 hours
-            first=10
-        )
- 
-        # Start the bot
-        print("Bot iniciado...")
-        application.run_polling()
+            # Add daily reset check
+            application.job_queue.run_repeating(
+                check_daily_reset,
+                interval=21600,  # Every 6 hours
+                first=10
+            )
+     
+            # Start the bot
+            print("Bot iniciado...")
+            application.run_polling()
 
-        return application  # Return the application for cleanup
+            return application  # Return the application for cleanup
 
+    except Timeout:
+        print("Another instance of the bot is already running. Exiting.")
+        return None
     except Exception as e:
         logger.error(f"Error starting bot: {e}")
         return None
