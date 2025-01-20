@@ -1,0 +1,150 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  overflow: hidden;
+  background-image: url('web_images/fondoagua.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.top-section {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.top-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.bar {
+  width: 30%;
+  height: auto;
+  margin: 0 5px;
+}
+
+.bar-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.resources {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.resource-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.resource-text {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.resource-rate {
+  font-size: 14px;
+  color: #666;
+}
+
+.creature-container {
+  position: relative;
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.creature {
+  width: 150px;
+  height: 150px;
+  background-image: url('web_images/criaturaagua.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  margin-bottom: 30%;
+}
+
+.rock {
+  width: 100px;
+  height: 100px;
+  position: absolute;
+  bottom: 12%;
+  left: 10%;
+  background-image: url('web_images/piedra_cristal.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.side-buttons {
+  position: absolute;
+  right: 10px;
+  top: 30%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-button {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.side-button img {
+  width: 48px;
+  height: 48px;
+}
+
+.menu {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.menu-button {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.menu-button img {
+  width: 60px;
+  height: 60px;
+}
+
+  
+  
+  
+  
+  

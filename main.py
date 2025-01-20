@@ -22,6 +22,7 @@ from datetime import time
 import zoneinfo
 import logging
 import asyncio
+import pytz
 from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
@@ -261,9 +262,10 @@ def main():
         #application.add_handler(CallbackQueryHandler(start_voice_of_abyss_quest, pattern=r'^start_voice_of_abyss$'))
         #application.add_handler(CallbackQueryHandler(process_quest_choice, pattern=r'^quest_choice_'))
 
-        job_time = time(hour=0, minute=0, tzinfo=ZoneInfo("Europe/Paris"))
+        job_time = time(hour=0, minute=0)
+        cet = pytz.timezone('Europe/Paris')
 
-        application.job_queue.run_daily(check_daily_reset, time=job_time)
+        application.job_queue.run_daily(check_daily_reset, time=job_time, tzinfo=cet)
 
         # Add periodic jobs
         application.job_queue.run_repeating(
