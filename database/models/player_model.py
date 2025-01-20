@@ -13,6 +13,7 @@ class Player(Base):
     nivel_combate = Column(Integer, default=0)
     oro_por_minuto = Column(Integer, default=1)
     inventario = Column(JSON, default={})
+    fire_coral = Column(Integer, default=0)
     
     mascota = Column(JSON, default={
         "hambre": 100,
@@ -64,6 +65,7 @@ class Player(Base):
                 "nivel": 1,
                 "oro": 0,
                 "oro_hora": 1,
+                "fire_coral": 0,
             },
             "comida": 0,
             "ultima_alimentacion": datetime.now().timestamp(),
@@ -97,6 +99,7 @@ class Player(Base):
             nivel_combate=0,
             oro_por_minuto=1,
             inventario={},
+            fire_coral=new_player_data['fire_coral'],
             mascota=new_player_data['mascota'],
             comida=new_player_data['comida'],
             ultima_alimentacion=new_player_data['ultima_alimentacion'],  # Changed from 'última_alimentación'
