@@ -15,6 +15,7 @@ from database import Session, get_all_players, get_player
 from bot.handlers.base import initialize_new_player
 from database.models.player_model import Player
 
+
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.handlers.daily import setup_daily_handlers, check_daily_reset, check_weekly_tickets
 
@@ -80,6 +81,28 @@ from bot.handlers.ads import (
 
 logging.basicConfig(level=logging.DEBUG)
 
+
+
+from datetime import time
+
+def setup_daily_handlers(application):
+    """Set up daily reward related handlers and jobs."""
+    # Add job to check daily resets at midnight CET
+    application.job_queue.run_daily(
+        check_daily_reset,
+        time=time(hour=0, minute=0),
+        days=(0, 1, 2, 3, 4, 5, 6)
+    )
+    
+    # Add job to check weekly tickets distribution
+    application.job_queue.run_daily(
+        check_weekly_tickets,
+        time=time(hour=0, minute=0),
+        days=(0,)  # This is correct for Monday
+    )
+
+    # Add handler for the /daily command
+    application.add_handler(CommandHandler("daily", claim_daily_reward))
 
 async def start(update: Update, context: CallbackContext):
     """Initialize user data and start the game."""
