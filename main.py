@@ -128,14 +128,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if not player:
                 # Initialize new player
-                player = create_player(user_id, nombre)  # Pass both user_id and nombre
-                session.commit()
+                player = create_player(user_id, nombre)  # This function should handle the session.add() internally
                 message = SUCCESS_MESSAGES["welcome"]
             else:
                 message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
             # Generate buttons based on player data
-            reply_markup = generar_botones(player.__dict__)
+            reply_markup = generar_botones(player.to_dict())  # Assuming player has a to_dict() method
 
             if update.callback_query and update.callback_query.message:
                 await update.callback_query.message.reply_text(
