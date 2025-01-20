@@ -132,14 +132,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
         # Convert player to dictionary for button generation
-        player_dict = {
-            'id': player.id,
-            'nombre': player.nombre,
-            'nivel': player.nivel,
-            'nivel_combate': player.nivel_combate,
-            'oro_por_minuto': player.oro_por_minuto,
-            # Add other necessary attributes here
-        }
+        player_dict = player.to_dict()  # Assuming Player model has a to_dict method
 
         # Generate buttons based on player data
         reply_markup = generar_botones(player_dict)

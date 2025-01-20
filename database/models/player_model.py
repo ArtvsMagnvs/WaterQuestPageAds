@@ -52,6 +52,8 @@ class Player(Base):
     def __repr__(self):
         return f'<Player {self.nombre}>'
 
+
+
     @staticmethod
     def initialize_new_player():
         """Initialize data for a new player."""
