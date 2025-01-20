@@ -128,13 +128,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if not player:
                 # Initialize new player
-                player = create_player(user_id, nombre)  # This function should handle the session.add() internally
+                logger.info(f"Creating new player for user_id: {user_id}, nombre: {nombre}")
+                player = create_player(user_id, nombre)
+                logger.info(f"New player created: {player}")
                 message = SUCCESS_MESSAGES["welcome"]
             else:
                 message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
             # Generate buttons based on player data
-            reply_markup = generar_botones(player.to_dict())  # Assuming player has a to_dict() method
+            reply_markup = generar_botones(player.to_dict())
 
             if update.callback_query and update.callback_query.message:
                 await update.callback_query.message.reply_text(
@@ -151,7 +153,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.close()
 
     except Exception as e:
-        logger.error(f"Error in start command: {e}")
+        logger.error(f"Error in start command: {e}", exc_info=True)
         if update.callback_query and update.callback_query.message:
             await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
         elif update.message:
