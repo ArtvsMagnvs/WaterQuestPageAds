@@ -97,7 +97,7 @@ class Player(Base):
             inventario={},
             mascota=new_player_data['mascota'],
             comida=new_player_data['comida'],
-            ultima_alimentacion=new_player_data['ultima_alimentacion'],
+            ultima_alimentacion=new_player_data['ultima_alimentacion'],  # Changed from 'última_alimentación'
             ultima_actualizacion=new_player_data['ultima_actualizacion'],
             combat_stats=new_player_data['combat_stats'],
             daily_reward=new_player_data['daily_reward'],
