@@ -15,6 +15,8 @@ from database import Session, get_all_players, get_player
 from bot.handlers.base import initialize_new_player
 from database.models.player_model import Player
 
+from filelock import FileLock, Timeout
+
 
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 from bot.handlers.daily import setup_daily_handlers, check_daily_reset, check_weekly_tickets
