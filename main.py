@@ -114,39 +114,44 @@ from bot.utils.keyboard import generar_botones
 from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Initialize user data and start the game."""
     try:
         user_id = update.effective_user.id
         nombre = update.effective_user.first_name
 
-        # Check if player exists in the database
-        player = get_player(user_id)
+        session = Session()
+        try:
+            # Check if player exists in the database
+            player = get_player(session, user_id)
 
-        if not player:
-            # Initialize new player
-            logger.info(f"Creating new player for user_id: {user_id}, nombre: {nombre}")
-            player = create_player(user_id, nombre)
-            logger.info(f"New player created with ID: {player.id}")
-            message = SUCCESS_MESSAGES["welcome"]
-        else:
-            message = "¡Bienvenido de nuevo! Usa los botones para jugar."
+            if not player:
+                # Initialize new player
+                logger.info(f"Creating new player for user_id: {user_id}, nombre: {nombre}")
+                player = create_player(session, user_id, nombre)
+                session.commit()
+                logger.info(f"New player created with ID: {player.id}")
+                message = SUCCESS_MESSAGES["welcome"]
+            else:
+                message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
-        # Convert player to dictionary for button generation
-        player_dict = player.to_dict()  # Assuming Player model has a to_dict method
+            # Convert player to dictionary for button generation
+            player_dict = player.to_dict()  # Assuming Player model has a to_dict method
 
-        # Generate buttons based on player data
-        reply_markup = generar_botones(player_dict)
+            # Generate buttons based on player data
+            reply_markup = generar_botones(player_dict)
 
-        if update.callback_query and update.callback_query.message:
-            await update.callback_query.message.edit_text(
-                message,
-                reply_markup=reply_markup
-            )
-        elif update.message:
-            await update.message.reply_text(
-                message,
-                reply_markup=reply_markup
-            )
+            if update.callback_query and update.callback_query.message:
+                await update.callback_query.message.edit_text(
+                    message,
+                    reply_markup=reply_markup
+                )
+            elif update.message:
+                await update.message.reply_text(
+                    message,
+                    reply_markup=reply_markup
+                )
+
+        finally:
+            session.close()
 
     except Exception as e:
         logger.error(f"Error in start command: {str(e)}", exc_info=True)
