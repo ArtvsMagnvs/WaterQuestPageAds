@@ -46,8 +46,8 @@ def initialize_new_player():
             "oro_hora": 1,
         },
         "comida": 0,
-        "última_alimentación": datetime.now().timestamp(),
-        "última_actualización": datetime.now().timestamp(),
+        "ultima_alimentacion": datetime.now().timestamp(),
+        "ultima_actualizacion": datetime.now().timestamp(),
         "inventario": {},
         "combat_stats": initialize_combat_stats(0),
         "daily_reward": {
