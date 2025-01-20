@@ -117,17 +117,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Initialize user data and start the game."""
     try:
         user_id = update.effective_user.id
+        nombre = update.effective_user.first_name  # Get the user's first name
         
         # Create a new database session
         session = Session()
 
         try:
             # Check if player exists in the database
-            player = get_player(user_id)  # Remove 'session' argument
+            player = get_player(user_id)
 
             if not player:
                 # Initialize new player
-                player = create_player(user_id)  # Remove 'session' argument
+                player = create_player(user_id, nombre)  # Pass both user_id and nombre
                 session.commit()
                 message = SUCCESS_MESSAGES["welcome"]
             else:
