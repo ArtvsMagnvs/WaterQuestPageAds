@@ -234,7 +234,7 @@ def setup_daily_handlers(application):
     application.job_queue.run_daily(
         check_daily_reset,
         time=midnight.time(),
-        days=(0, 1, 2, 3, 4, 5, 6)  # This is correct for all days of the week
+        days=(0, 1, 2, 3, 4, 5, 6)
     )
     
     # Add job to check weekly tickets distribution
