@@ -85,9 +85,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 from datetime import time
 
+from datetime import time
+
 def setup_daily_handlers(application):
     """Set up daily reward related handlers and jobs."""
-    # Add job to check daily resets at midnight CET
+    # Add job to check daily resets at midnight UTC
     application.job_queue.run_daily(
         check_daily_reset,
         time=time(hour=0, minute=0),
