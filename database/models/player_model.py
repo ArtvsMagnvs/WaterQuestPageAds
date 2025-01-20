@@ -125,7 +125,8 @@ class Player(Base):
             'daily_reward': self.daily_reward,
             'premium_features': self.premium_features,
             'watershard': self.watershard,
-            'miniboss_stats': self.miniboss_stats
+            'miniboss_stats': self.miniboss_stats,
+            'fire_coral': self.fire_coral  # Add this line
         }
 
     @classmethod

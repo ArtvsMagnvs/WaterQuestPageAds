@@ -11,13 +11,9 @@ if db_url.startswith("postgres://"):
 engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
 
-def get_player(user_id):
-    session = Session()
-    try:
-        player = session.query(Player).filter_by(id=user_id).first()
-        return player
-    finally:
-        session.close()
+def get_player(session, user_id):
+    """Retrieve a player from the database."""
+    return session.query(Player).filter(Player.id == user_id).first()
 
 def save_player(player):
     session = Session()

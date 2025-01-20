@@ -157,73 +157,75 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-async def button(update: Update, context: CallbackContext):
-    user_id = update.callback_query.from_user.id
-    """Handle button presses."""
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         query = update.callback_query
-        try:
-            await query.answer()
-        except:
-            # If the callback_query expired, we continue without error
-            pass
-
-        # Get player data for menu generation
         user_id = query.from_user.id
-        player = get_player(user_id)
+        
+        session = Session()
+        try:
+            player = get_player(session, user_id)
+            
+            if player is None:
+                logger.warning(f"Player data not found for user_id: {user_id}")
+                await query.message.reply_text(ERROR_MESSAGES["player_not_found"])
+                return
 
-        if player is None:
-            logger.warning(f"Player data not found for user_id: {user_id}")
-            await query.message.reply_text(ERROR_MESSAGES["player_not_found"])
-            return
+            try:
+                await query.answer()
+            except:
+                # If the callback_query expired, we continue without error
+                pass
 
-        # Route to appropriate handler based on callback_data
-        if query.data == "start":
-            await start(update, context)
-        elif query.data == "recolectar":
-            await recolectar(update, context)
-        elif query.data == "alimentar":
-            await alimentar(update, context)
-        elif query.data == "estado":
-            await estado(update, context)
-        elif query.data == "tienda":
-            await tienda(update, context)
-        elif query.data == "combate":
-            await quick_combat(update, context)
-        elif query.data == "miniboss":
-            await miniboss_handler(update, context)
-        elif query.data == "siguiente_miniboss":
-            await siguiente_miniboss(update, context)
-        elif query.data == "retirarse_miniboss":
-            await retirarse_miniboss(update, context)
-        elif query.data.startswith("retry_miniboss_"):
-            await retry_miniboss_battle(update, context)
-        elif query.data == "daily_reward":
-            await claim_daily_reward(update, context)
-        elif query.data.startswith("comprar_"):
-            item_name = query.data.split("_")[1]
-            await comprar(update, context, item_name)
-        elif query.data == "portal":
-            await portal_menu(update, context)
-        elif query.data.startswith("portal_spin_"):
-            await spin_portal(update, context)
-        elif query.data == "ads_menu":
-            await ads_menu(update, context)
-        elif query.data == "watch_ad":
-            await process_ad_watch(update, context)
-        elif query.data.startswith("retry_miniboss_"):
-            combat_type = query.data.split("_")[3]  # Extract the combat type
-            await retry_combat_ad(update, context, combat_type)
-        elif query.data == "premium_shop":
-            await premium_shop(update, context)
-        elif query.data == "comprar_fragmentos":
-            await comprar_fragmentos(update, context)
-        else:
-            logger.warning(f"Unhandled callback_data: {query.data}")
-            await query.message.reply_text(
-                ERROR_MESSAGES["generic_error"],
-                reply_markup=generar_botones(player.__dict__)
-            )
+            # Route to appropriate handler based on callback_data
+            if query.data == "start":
+                await start(update, context)
+            elif query.data == "recolectar":
+                await recolectar(update, context)
+            elif query.data == "alimentar":
+                await alimentar(update, context)
+            elif query.data == "estado":
+                await estado(update, context)
+            elif query.data == "tienda":
+                await tienda(update, context)
+            elif query.data == "combate":
+                await quick_combat(update, context)
+            elif query.data == "miniboss":
+                await miniboss_handler(update, context)
+            elif query.data == "siguiente_miniboss":
+                await siguiente_miniboss(update, context)
+            elif query.data == "retirarse_miniboss":
+                await retirarse_miniboss(update, context)
+            elif query.data.startswith("retry_miniboss_"):
+                await retry_miniboss_battle(update, context)
+            elif query.data == "daily_reward":
+                await claim_daily_reward(update, context)
+            elif query.data.startswith("comprar_"):
+                item_name = query.data.split("_")[1]
+                await comprar(update, context, item_name)
+            elif query.data == "portal":
+                await portal_menu(update, context)
+            elif query.data.startswith("portal_spin_"):
+                await spin_portal(update, context)
+            elif query.data == "ads_menu":
+                await ads_menu(update, context)
+            elif query.data == "watch_ad":
+                await process_ad_watch(update, context)
+            elif query.data.startswith("retry_miniboss_"):
+                combat_type = query.data.split("_")[3]  # Extract the combat type
+                await retry_combat_ad(update, context, combat_type)
+            elif query.data == "premium_shop":
+                await premium_shop(update, context)
+            elif query.data == "comprar_fragmentos":
+                await comprar_fragmentos(update, context)
+            else:
+                logger.warning(f"Unhandled callback_data: {query.data}")
+                await query.message.reply_text(
+                    ERROR_MESSAGES["generic_error"],
+                    reply_markup=generar_botones(player.__dict__)
+                )
+        finally:
+            session.close()
     except Exception as e:
         logger.error(f"Error in button handler: {e}")
         if update.callback_query and update.callback_query.message:
@@ -233,10 +235,6 @@ async def button(update: Update, context: CallbackContext):
             )
         elif update.message:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
-    finally:
-        # Ensure the database session is closed
-        if 'session' in locals():
-            session.close()
 
 
 

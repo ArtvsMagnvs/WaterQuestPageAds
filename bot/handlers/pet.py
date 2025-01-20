@@ -70,49 +70,54 @@ async def recolectar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             player = get_player(session, user_id)
             if not player:
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
-                else:
-                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                await send_message(update, ERROR_MESSAGES["no_game"])
                 return
 
             await actualizar_estados(player)
             mascota = player.mascota
 
-            if mascota["energia"] > 0:
+            if mascota.energia > 0:
                 player.comida += 10
-                mascota["energia"] -= 10
-                save_player(session, player)
+                mascota.energia -= 10
+                save_player(player)
 
                 # Send collection message with image
                 with open(IMAGE_PATHS['recolectar'], 'rb') as img_file:
-                    if update.message:
-                        await update.message.reply_photo(
-                            photo=img_file,
-                            caption=SUCCESS_MESSAGES["food_collected"].format(player.comida),
-                            reply_markup=generar_botones()
-                        )
-                    elif update.callback_query:
-                        await update.callback_query.message.reply_photo(
-                            photo=img_file,
-                            caption=SUCCESS_MESSAGES["food_collected"].format(player.comida),
-                            reply_markup=generar_botones()
-                        )
+                    await send_photo(
+                        update,
+                        img_file,
+                        SUCCESS_MESSAGES["food_collected"].format(player.comida),
+                        generar_botones()
+                    )
             else:
-                if update.message:
-                    await update.message.reply_text(ERROR_MESSAGES["no_energy"], reply_markup=generar_botones())
-                elif update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_energy"], reply_markup=generar_botones())
+                await send_message(update, ERROR_MESSAGES["no_energy"], generar_botones())
 
         finally:
             session.close()
 
     except Exception as e:
         logger.error(f"Error in recolectar: {e}")
-        if update.callback_query:
-            await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
-        else:
-            await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+        await send_message(update, ERROR_MESSAGES["generic_error"])
+
+async def send_message(update, text, reply_markup=None):
+    if update.callback_query:
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(text, reply_markup=reply_markup)
+
+async def send_photo(update, photo, caption, reply_markup=None):
+    if update.callback_query:
+        await update.callback_query.message.reply_photo(
+            photo=photo,
+            caption=caption,
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_photo(
+            photo=photo,
+            caption=caption,
+            reply_markup=reply_markup
+        )
 
 async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle pet feeding."""
@@ -130,17 +135,17 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             mascota = player.mascota
 
-            comida_necesaria = mascota.nivel * 5
+            comida_necesaria = mascota["nivel"] * 5
             if player.comida >= comida_necesaria:
                 # Process feeding
                 player.comida -= comida_necesaria
-                mascota.hambre = min(MAX_HUNGER, mascota.hambre + 10)
-                mascota.nivel += 1
+                mascota["hambre"] = min(MAX_HUNGER, mascota["hambre"] + 10)
+                mascota["nivel"] += 1
                 
                 # Calculate new gold production (with premium multiplier)
                 is_premium = player.premium_features.get('premium_status', False)
-                base_production = 2 ** (mascota.nivel - 1)
-                mascota.oro_hora = base_production * (1.5 if is_premium else 1.0)
+                base_production = 2 ** (mascota["nivel"] - 1)
+                mascota["oro_hora"] = base_production * (1.5 if is_premium else 1.0)
                 
                 save_player(player)
 
@@ -150,9 +155,9 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         await update.message.reply_photo(
                             photo=img_file,
                             caption=SUCCESS_MESSAGES["pet_fed"].format(
-                                mascota.nivel,
-                                mascota.oro_hora,
-                                mascota.hambre
+                                mascota["nivel"],
+                                mascota["oro_hora"],
+                                mascota["hambre"]
                             ),
                             reply_markup=generar_botones()
                         )
@@ -160,9 +165,9 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         await update.callback_query.message.reply_photo(
                             photo=img_file,
                             caption=SUCCESS_MESSAGES["pet_fed"].format(
-                                mascota.nivel,
-                                mascota.oro_hora,
-                                mascota.hambre
+                                mascota["nivel"],
+                                mascota["oro_hora"],
+                                mascota["hambre"]
                             ),
                             reply_markup=generar_botones()
                         )
@@ -191,10 +196,11 @@ async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             player = get_player(session, user_id)
             if not player:
+                message = ERROR_MESSAGES["no_game"]
                 if update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                    await update.callback_query.message.reply_text(message)
                 else:
-                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                    await update.message.reply_text(message)
                 return
 
             await actualizar_estados(player)
@@ -205,16 +211,16 @@ async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Create status message
             estado_mensaje = (
-                f"🍖 Hambre: {mascota.hambre}\n"
-                f"⚡ Energía: {mascota.energia}\n"
-                f"📊 Nivel: {mascota.nivel}\n"
-                f"💰 Oro: {mascota.oro}\n"
-                f"⏱️ Producción de Oro/Minuto: {mascota.oro_hora}\n"
+                f"🍖 Hambre: {mascota['hambre']}\n"
+                f"⚡ Energía: {mascota['energia']}\n"
+                f"📊 Nivel: {mascota['nivel']}\n"
+                f"💰 Oro: {mascota['oro']}\n"
+                f"⏱️ Producción de Oro/Minuto: {mascota['oro_hora']}\n"
                 f"🌾 Comida: {comida}\n"
                 f"\n📊 Estadísticas de Combate:\n"
-                f"🎖️ Nivel de Combate: {combat_stats.level}\n"
-                f"🌺 Coral de Fuego: {combat_stats.fire_coral}\n"
-                f"⚔️ Batallas hoy: {combat_stats.battles_today}/20"
+                f"🎖️ Nivel de Combate: {combat_stats['level']}\n"
+                f"🌺 Coral de Fuego: {combat_stats['fire_coral']}\n"
+                f"⚔️ Batallas hoy: {combat_stats['battles_today']}/20"
             )
 
             # Add premium status if active
@@ -237,13 +243,13 @@ async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await update.message.reply_photo(
                         photo=img_file,
                         caption=estado_mensaje,
-                        reply_markup=generar_botones()
+                        reply_markup=generar_botones(player.__dict__)
                     )
                 elif update.callback_query:
                     await update.callback_query.message.reply_photo(
                         photo=img_file,
                         caption=estado_mensaje,
-                        reply_markup=generar_botones()
+                        reply_markup=generar_botones(player.__dict__)
                     )
 
             save_player(player)
@@ -252,11 +258,12 @@ async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.close()
 
     except Exception as e:
-        logger.error(f"Error in estado: {e}")
+        logger.error(f"Error in estado: {e}", exc_info=True)
+        message = ERROR_MESSAGES["generic_error"]
         if update.callback_query:
-            await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
+            await update.callback_query.message.reply_text(message)
         else:
-            await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+            await update.message.reply_text(message)
 
 async def check_premium_expiry(context: ContextTypes.DEFAULT_TYPE):
     """Background task to check and update premium feature expiration."""

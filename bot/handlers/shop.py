@@ -38,22 +38,26 @@ async def tienda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle shop interface with full-width button layout."""
     try:
         user_id = update.effective_user.id
+        
         session = Session()
         try:
             player = get_player(session, user_id)
+            
             if not player:
+                message = ERROR_MESSAGES["no_game"]
                 if update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
+                    await update.callback_query.message.reply_text(message)
                 else:
-                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                    await update.message.reply_text(message)
                 return
 
             if not player.mascota or 'oro' not in player.mascota:
                 logger.error(f"Invalid or missing player data for user_id: {user_id}")
+                message = ERROR_MESSAGES["generic_error"]
                 if update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
+                    await update.callback_query.message.reply_text(message)
                 else:
-                    await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+                    await update.message.reply_text(message)
                 return
 
             # Header message with complete item descriptions and production rates
@@ -83,24 +87,19 @@ async def tienda(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     current_level = player.inventario.get(base_item['nombre'], 0) + 1
                     item = ShopManager.calculate_item_stats(base_item, current_level)
                     
-                    # Create button text with only name, level and price
-                    can_afford = player.mascota['oro'] >= item['costo']
                     item_text = (
                         f"{base_item['emoji']} {base_item['nombre']}\u2800\u2800\n"
                         f"Nivel {current_level}\u2800\u2800\n"
                         f"💰 Precio: {item['costo']} oro\u2800\u2800"
                     )
                     
-                    # Create button with comprar callback
                     button = InlineKeyboardButton(
                         text=item_text,
                         callback_data=f"comprar_{base_item['nombre']}"
                     )
                     
-                    # Add button in its own row
                     item_buttons.append([button])
 
-                # Add navigation button at the bottom
                 item_buttons.append([InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")])
                 reply_markup = InlineKeyboardMarkup(item_buttons)
 
@@ -127,13 +126,11 @@ async def tienda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Error in tienda: {e}")
-        try:
-            if update.callback_query:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
-            else:
-                await update.message.reply_text(ERROR_MESSAGES["generic_error"])
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message: {reply_error}")
+        message = ERROR_MESSAGES["generic_error"]
+        if update.callback_query:
+            await update.callback_query.message.reply_text(message)
+        else:
+            await update.message.reply_text(message)
 
 async def comprar(update: Update, context: ContextTypes.DEFAULT_TYPE, item_name: str):
     """Handle item purchases."""
