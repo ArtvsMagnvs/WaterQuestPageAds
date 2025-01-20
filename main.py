@@ -83,13 +83,10 @@ from bot.handlers.ads import (
 
 logging.basicConfig(level=logging.DEBUG)
 
+from telegram.ext import Application
 
 
-from datetime import time
-
-from datetime import time
-
-def setup_daily_handlers(application):
+def setup_daily_handlers(application: Application):
     """Set up daily reward related handlers and jobs."""
     # Add job to check daily resets at midnight UTC
     application.job_queue.run_daily(
@@ -102,11 +99,15 @@ def setup_daily_handlers(application):
     application.job_queue.run_daily(
         check_weekly_tickets,
         time=time(hour=0, minute=0),
-        days=(0,)  # This is correct for Monday
+        days=(0,)  # This is correct for Monday in v20.0+
     )
 
     # Add handler for the /daily command
     application.add_handler(CommandHandler("daily", claim_daily_reward))
+
+from database.db.game_db import get_player, create_player, Session
+from bot.utils.keyboard import generar_botones
+from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
 
 from database.db.game_db import get_player, create_player, Session
 from bot.utils.keyboard import generar_botones
@@ -122,11 +123,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             # Check if player exists in the database
-            player = get_player(session, user_id)
+            player = get_player(user_id)  # Remove 'session' argument
 
             if not player:
                 # Initialize new player
-                player = create_player(session, user_id)
+                player = create_player(user_id)  # Remove 'session' argument
                 session.commit()
                 message = SUCCESS_MESSAGES["welcome"]
             else:
