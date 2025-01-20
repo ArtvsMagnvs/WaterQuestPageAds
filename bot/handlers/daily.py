@@ -6,6 +6,7 @@ import random
 import logging
 from datetime import datetime, timedelta
 import pytz
+from telegram.ext import CommandHandler
 from .premium import distribute_weekly_tickets
 from bot.config.settings import (
     DAILY_REWARDS,
@@ -242,3 +243,6 @@ def setup_daily_handlers(application):
         time=midnight.time(),
         days=(0,)  # This is correct for Monday
     )
+
+    # Add handler for the /daily command
+    application.add_handler(CommandHandler("daily", claim_daily_reward))
