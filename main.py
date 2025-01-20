@@ -290,7 +290,10 @@ def main():
         job_time = time(hour=0, minute=0)
         cet = pytz.timezone('Europe/Paris')
 
-        application.job_queue.run_daily(check_daily_reset, time=job_time, tzinfo=cet)
+        application.job_queue.run_daily(check_daily_reset, time=job_time.replace(tzinfo=cet))
+
+        utc_time = cet.localize(datetime.combine(datetime.now(cet), job_time)).astimezone(pytz.UTC).time()
+        application.job_queue.run_daily(check_daily_reset, time=utc_time)
 
         # Add periodic jobs
         application.job_queue.run_repeating(
