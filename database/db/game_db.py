@@ -37,6 +37,8 @@ def create_player(user_id, nombre):
         new_player.id = user_id  # Set the id explicitly
         session.add(new_player)
         session.commit()
+        # Refresh the instance to ensure all attributes are loaded
+        session.refresh(new_player)
         return new_player
     except Exception as e:
         session.rollback()

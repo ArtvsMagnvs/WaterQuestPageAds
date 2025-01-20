@@ -126,13 +126,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Initialize new player
             logger.info(f"Creating new player for user_id: {user_id}, nombre: {nombre}")
             player = create_player(user_id, nombre)
-            logger.info(f"New player created: {player}")
+            logger.info(f"New player created with ID: {player.id}")
             message = SUCCESS_MESSAGES["welcome"]
         else:
             message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
+        # Convert player to dictionary for button generation
+        player_dict = {
+            'id': player.id,
+            'nombre': player.nombre,
+            'nivel': player.nivel,
+            'nivel_combate': player.nivel_combate,
+            'oro_por_minuto': player.oro_por_minuto,
+            # Add other necessary attributes here
+        }
+
         # Generate buttons based on player data
-        reply_markup = generar_botones(player.to_dict())
+        reply_markup = generar_botones(player_dict)
 
         if update.callback_query and update.callback_query.message:
             await update.callback_query.message.edit_text(
@@ -151,6 +161,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.edit_text(ERROR_MESSAGES["generic_error"])
         elif update.message:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+
 
 
 async def button(update: Update, context: CallbackContext):
