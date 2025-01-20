@@ -117,47 +117,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Initialize user data and start the game."""
     try:
         user_id = update.effective_user.id
-        nombre = update.effective_user.first_name  # Get the user's first name
-        
-        # Create a new database session
-        session = Session()
+        nombre = update.effective_user.first_name
 
-        try:
-            # Check if player exists in the database
-            player = get_player(user_id)
+        # Check if player exists in the database
+        player = get_player(user_id)
 
-            if not player:
-                # Initialize new player
-                logger.info(f"Creating new player for user_id: {user_id}, nombre: {nombre}")
-                player = create_player(user_id, nombre)
-                logger.info(f"New player created: {player}")
-                message = SUCCESS_MESSAGES["welcome"]
-            else:
-                message = "¡Bienvenido de nuevo! Usa los botones para jugar."
+        if not player:
+            # Initialize new player
+            logger.info(f"Creating new player for user_id: {user_id}, nombre: {nombre}")
+            player = create_player(user_id, nombre)
+            logger.info(f"New player created: {player}")
+            message = SUCCESS_MESSAGES["welcome"]
+        else:
+            message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
-            # Generate buttons based on player data
-            reply_markup = generar_botones(player.to_dict())
+        # Generate buttons based on player data
+        reply_markup = generar_botones(player.to_dict())
 
-            if update.callback_query and update.callback_query.message:
-                await update.callback_query.message.reply_text(
-                    message,
-                    reply_markup=reply_markup
-                )
-            elif update.message:
-                await update.message.reply_text(
-                    message,
-                    reply_markup=reply_markup
-                )
-
-        finally:
-            session.close()
+        if update.callback_query and update.callback_query.message:
+            await update.callback_query.message.edit_text(
+                message,
+                reply_markup=reply_markup
+            )
+        elif update.message:
+            await update.message.reply_text(
+                message,
+                reply_markup=reply_markup
+            )
 
     except Exception as e:
-        logger.error(f"Error in start command: {e}", exc_info=True)
+        logger.error(f"Error in start command: {str(e)}", exc_info=True)
         if update.callback_query and update.callback_query.message:
-            await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
+            await update.callback_query.message.edit_text(ERROR_MESSAGES["generic_error"])
         elif update.message:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+
 
 async def button(update: Update, context: CallbackContext):
     user_id = update.callback_query.from_user.id

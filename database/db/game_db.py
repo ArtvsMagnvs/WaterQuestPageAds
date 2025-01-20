@@ -30,10 +30,19 @@ def save_player(player):
     finally:
         session.close()
 
-def create_player(session, user_id):
-    new_player = Player(id=user_id)
-    session.add(new_player)
-    return new_player
+def create_player(user_id, nombre):
+    session = Session()
+    try:
+        new_player = Player.create_new_player(nombre)
+        new_player.id = user_id  # Set the id explicitly
+        session.add(new_player)
+        session.commit()
+        return new_player
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
 
 def get_all_players():
     session = Session()
