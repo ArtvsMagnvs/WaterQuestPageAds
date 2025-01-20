@@ -108,7 +108,11 @@ def setup_daily_handlers(application):
     # Add handler for the /daily command
     application.add_handler(CommandHandler("daily", claim_daily_reward))
 
-async def start(update: Update, context: CallbackContext):
+from database.db.game_db import get_player, create_player, Session
+from bot.utils.keyboard import generar_botones
+from bot.config.settings import SUCCESS_MESSAGES, ERROR_MESSAGES, logger
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Initialize user data and start the game."""
     try:
         user_id = update.effective_user.id
@@ -118,18 +122,15 @@ async def start(update: Update, context: CallbackContext):
 
         try:
             # Check if player exists in the database
-            player = session.query(Player).filter(Player.id == user_id).first()
+            player = get_player(session, user_id)
 
             if not player:
                 # Initialize new player
-                new_player_data = initialize_new_player()
-                player = Player(id=user_id, **new_player_data)
-                session.add(player)
+                player = create_player(session, user_id)
                 session.commit()
-                
                 message = SUCCESS_MESSAGES["welcome"]
             else:
-                message = "¡Ya tienes una mascota! Usa los botones para jugar."
+                message = "¡Bienvenido de nuevo! Usa los botones para jugar."
 
             # Generate buttons based on player data
             reply_markup = generar_botones(player.__dict__)
@@ -156,6 +157,7 @@ async def start(update: Update, context: CallbackContext):
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
 
 async def button(update: Update, context: CallbackContext):
+    user_id = update.callback_query.from_user.id
     """Handle button presses."""
     try:
         query = update.callback_query
