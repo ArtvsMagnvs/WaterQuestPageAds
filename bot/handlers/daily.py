@@ -17,7 +17,7 @@ from bot.config.settings import (
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
-from database.db.game_db import Session
+from database.db.game_db import get_player, Session
 from database.models import Player
 from sqlalchemy import cast, String
 
@@ -39,10 +39,10 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             
             if not player:
                 logger.error(f"Player not found for user_id: {user_id}")
-                await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                await send_message(update, ERROR_MESSAGES["no_game"])
                 return
 
-            logger.debug(f"Player data: {player.__dict__}")  # Add this line
+            logger.debug(f"Player data: {player.__dict__}")
 
             current_time = datetime.now()
             last_claim_dt = datetime.fromtimestamp(player.daily_reward.get('last_claim', 0))
@@ -53,14 +53,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 hours, remainder = divmod(time_left.seconds, 3600)
                 minutes, _ = divmod(remainder, 60)
                 
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(
-                        ERROR_MESSAGES["daily_reward_wait"].format(hours, minutes)
-                    )
-                else:
-                    await update.message.reply_text(
-                        ERROR_MESSAGES["daily_reward_wait"].format(hours, minutes)
-                    )
+                await send_message(update, ERROR_MESSAGES["daily_reward_wait"].format(hours, minutes))
                 return
 
             # Check streak
@@ -145,19 +138,24 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
-            if update.callback_query:
-                await update.callback_query.message.reply_text(message, reply_markup=reply_markup)
-            else:
-                await update.message.reply_text(message, reply_markup=reply_markup)
+            await send_message(update, message, reply_markup=reply_markup)
 
         except Exception as e:
             logger.error(f"Error in claim_daily_reward: {str(e)}", exc_info=True)
-            await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
+            await send_message(update, ERROR_MESSAGES["daily_reward_error"])
         finally:
             session.close()
     except Exception as e:
         logger.error(f"Outer error in claim_daily_reward: {str(e)}", exc_info=True)
-        await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
+        await send_message(update, ERROR_MESSAGES["daily_reward_error"])
+
+async def send_message(update: Update, text: str, reply_markup=None):
+    if update.callback_query:
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup)
+    elif update.message:
+        await update.message.reply_text(text, reply_markup=reply_markup)
+    else:
+        logger.error("Neither callback_query nor message found in update object")
 
 async def check_daily_reset(context: ContextTypes.DEFAULT_TYPE):
     """Background task to check and reset daily rewards."""
