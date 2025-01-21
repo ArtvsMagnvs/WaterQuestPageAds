@@ -30,43 +30,28 @@ def get_next_midnight_cet():
     return midnight
 
 async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle daily reward claims."""
     try:
         user_id = update.effective_user.id
         
-        # Create a new database session
         session = Session()
-        
         try:
-            # Fetch player from the database
-            player = session.query(Player).filter(Player.id == user_id).first()
+            player = get_player(session, user_id)
             
             if not player:
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
-                else:
-                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                logger.error(f"Player not found for user_id: {user_id}")
+                await update.message.reply_text(ERROR_MESSAGES["no_game"])
                 return
 
-            # Initialize daily reward data if it doesn't exist
-            if not player.daily_reward:
-                player.daily_reward = {
-                    'last_claim': 0,
-                    'streak': 1,
-                    'last_weekly_tickets': 0
-                }
+            logger.debug(f"Player data: {player.__dict__}")  # Add this line
 
-            # Get CET timezone and current time
-            cet = pytz.timezone('CET')
-            current_time = datetime.now(cet)
-            last_claim_dt = datetime.fromtimestamp(player.daily_reward['last_claim'], cet)
+            current_time = datetime.now()
+            last_claim_dt = datetime.fromtimestamp(player.daily_reward.get('last_claim', 0))
 
-            # Check if already claimed today
-            if last_claim_dt.date() == current_time.date():
-                next_reset = get_next_midnight_cet()
-                time_until_reset = next_reset - current_time
-                hours = int(time_until_reset.total_seconds() // 3600)
-                minutes = int((time_until_reset.total_seconds() % 3600) // 60)
+            # Check if 24 hours have passed since last claim
+            if current_time - last_claim_dt < timedelta(hours=24):
+                time_left = timedelta(hours=24) - (current_time - last_claim_dt)
+                hours, remainder = divmod(time_left.seconds, 3600)
+                minutes, _ = divmod(remainder, 60)
                 
                 if update.callback_query:
                     await update.callback_query.message.reply_text(
@@ -165,15 +150,14 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             else:
                 await update.message.reply_text(message, reply_markup=reply_markup)
 
+        except Exception as e:
+            logger.error(f"Error in claim_daily_reward: {str(e)}", exc_info=True)
+            await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
         finally:
             session.close()
-
     except Exception as e:
-        logger.error(f"Error in daily_reward: {e}")
-        if update.callback_query:
-            await update.callback_query.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
-        else:
-            await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
+        logger.error(f"Outer error in claim_daily_reward: {str(e)}", exc_info=True)
+        await update.message.reply_text(ERROR_MESSAGES["daily_reward_error"])
 
 async def check_daily_reset(context: ContextTypes.DEFAULT_TYPE):
     """Background task to check and reset daily rewards."""
