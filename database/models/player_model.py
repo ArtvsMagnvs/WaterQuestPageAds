@@ -31,12 +31,12 @@ class Player(Base):
     })
 
     combat_stats = Column(JSON, default={
-        "nivel": 1,
-        "vida": 100,
-        "ataque": 10,
-        "exp": 0,
-        "fire_coral": 0
-    })
+    "nivel": 1,
+    "vida": 100,
+    "ataque": 10,
+    "exp": 0,
+    "fire_coral": 0
+})
 
     premium_features = Column(JSON, default={
         "premium_status": False,
