@@ -88,6 +88,8 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             # Update player stats
             player.mascota['oro'] += oro
+            if 'fire_coral' not in player.combat_stats:
+                player.combat_stats['fire_coral'] = 0
             player.combat_stats['fire_coral'] += coral
             player.comida += comida
             player.mascota['energia'] = rewards['energia']  # Full energy restore
