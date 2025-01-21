@@ -112,6 +112,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle pet feeding."""
     try:
