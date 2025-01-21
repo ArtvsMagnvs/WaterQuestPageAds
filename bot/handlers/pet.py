@@ -63,55 +63,61 @@ async def actualizar_estados(player):
     return False
 
 async def recolectar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle pet collection."""
+    """Handle food collection."""
     try:
         user_id = update.effective_user.id
         session = Session()
         try:
             player = get_player(session, user_id)
             if not player:
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
-                else:
-                    await update.message.reply_text(ERROR_MESSAGES["no_game"])
+                await send_message(update, ERROR_MESSAGES["no_game"])
                 return
 
+            await actualizar_estados(player)
             mascota = player.mascota
 
-            if mascota['energia'] >= 10:
-                oro_recolectado = mascota['oro']
-                player.oro_por_minuto += oro_recolectado
-                mascota['oro'] = 0
-                mascota['energia'] -= 10
-
+            if mascota.energia > 10:
+                player.comida += 10
+                mascota.energia -= 10
                 save_player(player)
 
-                mensaje = f"Has recolectado {oro_recolectado} de oro. Tu producción de oro por minuto ahora es de {player.oro_por_minuto:.2f}."
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(mensaje, reply_markup=generar_botones())
-                else:
-                    await update.message.reply_text(mensaje, reply_markup=generar_botones())
+                # Send collection message with image
+                with open(IMAGE_PATHS['recolectar'], 'rb') as img_file:
+                    await send_photo(
+                        update,
+                        img_file,
+                        SUCCESS_MESSAGES["food_collected"].format(player.comida),
+                        generar_botones()
+                    )
             else:
-                mensaje = "Tu mascota no tiene suficiente energía para recolectar oro. Necesita al menos 10 de energía."
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(mensaje, reply_markup=generar_botones())
-                else:
-                    await update.message.reply_text(mensaje, reply_markup=generar_botones())
+                await send_message(update, ERROR_MESSAGES["no_energy"], generar_botones())
 
         finally:
             session.close()
 
     except Exception as e:
         logger.error(f"Error in recolectar: {e}")
-        if update.callback_query:
-            await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
-        else:
-            await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+        await send_message(update, ERROR_MESSAGES["generic_error"])
 
-import logging
+async def send_message(update, text, reply_markup=None):
+    if update.callback_query:
+        await update.callback_query.message.reply_text(text, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(text, reply_markup=reply_markup)
 
-logger = logging.getLogger(__name__)
-
+async def send_photo(update, photo, caption, reply_markup=None):
+    if update.callback_query:
+        await update.callback_query.message.reply_photo(
+            photo=photo,
+            caption=caption,
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_photo(
+            photo=photo,
+            caption=caption,
+            reply_markup=reply_markup
+        )
 
 async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle pet feeding."""
@@ -121,7 +127,6 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             player = get_player(session, user_id)
             if not player:
-                logger.warning(f"No game found for user {user_id}")
                 if update.callback_query:
                     await update.callback_query.message.reply_text(ERROR_MESSAGES["no_game"])
                 else:
@@ -143,8 +148,6 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 mascota["oro_hora"] = base_production * (1.5 if is_premium else 1.0)
                 
                 save_player(player)
-
-                logger.info(f"User {user_id} fed their pet. New level: {mascota['nivel']}")
 
                 # Send feeding message with image
                 with open(IMAGE_PATHS['alimentar'], 'rb') as img_file:
@@ -170,7 +173,6 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         )
             else:
                 mensaje = f"¡Necesitas {comida_necesaria} comidas para subir de nivel! Tienes {player.comida} comidas."
-                logger.info(f"User {user_id} attempted to feed pet but had insufficient food")
                 if update.message:
                     await update.message.reply_text(mensaje, reply_markup=generar_botones())
                 elif update.callback_query:
@@ -180,7 +182,7 @@ async def alimentar(update: Update, context: ContextTypes.DEFAULT_TYPE):
             session.close()
 
     except Exception as e:
-        logger.error(f"Error in alimentar for user {user_id}: {e}", exc_info=True)
+        logger.error(f"Error in alimentar: {e}")
         if update.callback_query:
             await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
         else:
