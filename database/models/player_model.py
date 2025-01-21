@@ -8,12 +8,38 @@ class Player(Base):
     __tablename__ = 'players'
 
     id = Column(Integer, primary_key=True)
-    nombre = Column(String(80), unique=True, nullable=False)
-    nivel = Column(Integer, default=1)
-    nivel_combate = Column(Integer, default=0)
-    oro_por_minuto = Column(Integer, default=1)
-    inventario = Column(JSON, default={})
-    fire_coral = Column(Integer, default=0)
+    nombre = Column(String)
+    nivel = Column(Integer)
+    nivel_combate = Column(Integer)
+    oro_por_minuto = Column(Integer)
+    inventario = Column(JSON)
+    fire_coral = Column(Integer)  # Add this line
+    mascota = Column(JSON)
+    comida = Column(Integer)
+    ultima_alimentacion = Column(Integer)
+    ultima_actualizacion = Column(Integer)
+    combat_stats = Column(JSON)
+    daily_reward = Column(JSON)
+    premium_features = Column(JSON)
+    watershard = Column(Integer)
+    miniboss_stats = Column(JSON)
+
+    def __init__(self, nombre, nivel, nivel_combate, oro_por_minuto, inventario, fire_coral, mascota, comida, ultima_alimentacion, ultima_actualizacion, combat_stats, daily_reward, premium_features, watershard, miniboss_stats):
+        self.nombre = nombre
+        self.nivel = nivel
+        self.nivel_combate = nivel_combate
+        self.oro_por_minuto = oro_por_minuto
+        self.inventario = inventario
+        self.fire_coral = fire_coral
+        self.mascota = mascota
+        self.comida = comida
+        self.ultima_alimentacion = ultima_alimentacion
+        self.ultima_actualizacion = ultima_actualizacion
+        self.combat_stats = combat_stats
+        self.daily_reward = daily_reward
+        self.premium_features = premium_features
+        self.watershard = watershard
+        self.miniboss_stats = miniboss_stats
     
     mascota = Column(JSON, default={
         "hambre": 100,
