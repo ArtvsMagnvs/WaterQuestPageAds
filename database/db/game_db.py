@@ -2,6 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database.models.player_model import Base, Player
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Database configuration for Railway PostgreSQL
 db_url = os.environ.get('DATABASE_URL')
@@ -26,11 +30,10 @@ def save_player(player):
     finally:
         session.close()
 
-def create_player(user_id, nombre):
+def create_player(user_id):
     session = Session()
     try:
-        new_player = Player.create_new_player(nombre)
-        new_player.id = user_id  # Set the id explicitly
+        new_player = Player(user_id=user_id)
         session.add(new_player)
         session.commit()
         # Refresh the instance to ensure all attributes are loaded
@@ -38,6 +41,7 @@ def create_player(user_id, nombre):
         return new_player
     except Exception as e:
         session.rollback()
+        logger.error(f"Error creating player for user_id {user_id}: {str(e)}")
         raise e
     finally:
         session.close()

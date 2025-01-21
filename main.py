@@ -250,7 +250,7 @@ async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
     """Periodic save job."""
     try:
         session = Session()
-        players = get_all_players(session)
+        players = get_all_players()  # Remove the session argument
         
         if players:
             player_data = {player.user_id: player.to_dict() for player in players}

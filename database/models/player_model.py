@@ -8,39 +8,19 @@ class Player(Base):
     __tablename__ = 'players'
 
     id = Column(Integer, primary_key=True)
-    nombre = Column(String)
-    nivel = Column(Integer)
-    nivel_combate = Column(Integer)
-    oro_por_minuto = Column(Integer)
-    inventario = Column(JSON)
-    fire_coral = Column(Integer)  # Add this line
-    mascota = Column(JSON)
-    comida = Column(Integer)
-    ultima_alimentacion = Column(Integer)
-    ultima_actualizacion = Column(Integer)
-    combat_stats = Column(JSON)
-    daily_reward = Column(JSON)
-    premium_features = Column(JSON)
-    watershard = Column(Integer)
-    miniboss_stats = Column(JSON)
+    user_id = Column(Integer, unique=True, nullable=False)
+    nombre = Column(String, nullable=False)
+    nivel = Column(Integer, default=1)
+    nivel_combate = Column(Integer, default=1)
+    oro_por_minuto = Column(Float, default=1.0)
+    inventario = Column(JSON, default={})
+    fire_coral = Column(Integer, default=0)
+    comida = Column(Integer, default=0)
+    fragmento_del_destino = Column(Integer, default=0)
+    watershard = Column(Integer, default=0)
+    ultima_alimentacion = Column(DateTime, default=datetime.utcnow)
+    ultima_actualizacion = Column(DateTime, default=datetime.utcnow)
 
-    def __init__(self, nombre, nivel, nivel_combate, oro_por_minuto, inventario, fire_coral, mascota, comida, ultima_alimentacion, ultima_actualizacion, combat_stats, daily_reward, premium_features, watershard, miniboss_stats):
-        self.nombre = nombre
-        self.nivel = nivel
-        self.nivel_combate = nivel_combate
-        self.oro_por_minuto = oro_por_minuto
-        self.inventario = inventario
-        self.fire_coral = fire_coral
-        self.mascota = mascota
-        self.comida = comida
-        self.ultima_alimentacion = ultima_alimentacion
-        self.ultima_actualizacion = ultima_actualizacion
-        self.combat_stats = combat_stats
-        self.daily_reward = daily_reward
-        self.premium_features = premium_features
-        self.watershard = watershard
-        self.miniboss_stats = miniboss_stats
-    
     mascota = Column(JSON, default={
         "hambre": 100,
         "energia": 100,
@@ -48,36 +28,79 @@ class Player(Base):
         "oro": 0,
         "oro_hora": 1,
     })
-    
-    comida = Column(Integer, default=0)
-    ultima_alimentacion = Column(Float, default=datetime.now().timestamp())
-    ultima_actualizacion = Column(Float, default=datetime.now().timestamp())
 
     combat_stats = Column(JSON, default={
-        "nivel": 0, 
-        "vida": 100, 
-        "ataque": 10
+        "nivel": 1,
+        "vida": 100,
+        "ataque": 10,
+        "exp": 0,
+        "fire_coral": 0
     })
 
-    daily_reward = Column(JSON, default={
-        "last_claim": 0,
-        "streak": 1,
-        "last_weekly_tickets": 0
-    })
     premium_features = Column(JSON, default={
         "premium_status": False,
         "premium_status_expires": 0,
         "tickets": 0,
+        "daily_bonus": False
     })
-    watershard = Column(Integer, default=0)
+
+    daily_reward = Column(JSON, default={
+        "last_claim": 0,
+        "streak": 0,
+        "last_weekly_tickets": 0
+    })
 
     miniboss_stats = Column(JSON, default={
         "attempts_today": 0,
         "last_attempt_date": None
     })
 
-    def __repr__(self):
-        return f'<Player {self.nombre}>'
+    def __init__(self, user_id, nombre):
+        self.user_id = user_id
+        self.nombre = nombre
+        self.nivel = 1
+        self.nivel_combate = 1
+        self.oro_por_minuto = 1.0
+        self.inventario = {}
+        self.fire_coral = 0
+        self.comida = 0
+        self.fragmento_del_destino = 0
+        self.watershard = 0
+        self.ultima_alimentacion = datetime.utcnow()
+        self.ultima_actualizacion = datetime.utcnow()
+        self.mascota = {
+            "hambre": 100,
+            "energia": 100,
+            "nivel": 1,
+            "oro": 0,
+            "oro_hora": 1,
+        }
+        self.combat_stats = {
+            "nivel": 1,
+            "vida": 100,
+            "ataque": 10,
+            "exp": 0,
+            "fire_coral": 0
+        }
+        self.premium_features = {
+            "premium_status": False,
+            "premium_status_expires": 0,
+            "tickets": 0,
+            "daily_bonus": False
+        }
+        self.daily_reward = {
+            "last_claim": 0,
+            "streak": 0,
+            "last_weekly_tickets": 0
+        }
+        self.miniboss_stats = {
+            "attempts_today": 0,
+            "last_attempt_date": None
+        }
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 
 
