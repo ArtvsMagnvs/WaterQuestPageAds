@@ -1,9 +1,15 @@
 # handlers/miniboss.py
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
+
+# Standard library imports
 import random
 import logging
 from datetime import datetime
+
+# Third-party imports
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+
+# Local application imports
 from bot.config.settings import (
     SUCCESS_MESSAGES, 
     ERROR_MESSAGES, 
@@ -12,22 +18,20 @@ from bot.config.settings import (
     MIN_MINIBOSS_GOLD,
     calculate_miniboss_probabilities
 )
-from bot.utils.keyboard import generar_botones
-from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data, initialize_new_player
+from bot.utils.game_mechanics import exp_needed_for_level, initialize_combat_stats, add_exp
 from bot.handlers.ads import retry_combat_ad
-
-from bot.utils.save_system import initialize_new_player
-
 from database.db.game_db import Session, get_player, save_player, update_player
-from bot.handlers.ads import retry_combat_ad
 
-# Store active miniboss battles
-miniboss_estado = {}
+# Global variables
+miniboss_estado = {}  # Store active miniboss battles
 
-# MiniBoss attempts limits
+# Constants
 MAX_MINIBOSS_ATTEMPTS = 3  # Regular users
 MAX_PREMIUM_MINIBOSS_ATTEMPTS = 10  # Premium users
+
 
 def inicializar_miniboss(user_id):
     """Initialize a new miniboss battle sequence."""
@@ -181,7 +185,8 @@ async def procesar_combate_miniboss(update: Update, context: ContextTypes.DEFAUL
                 recompensas = calcular_recompensas(enemigo_actual, is_premium)
                 estado_actual["recompensas"]["oro"] += recompensas["oro"]
                 estado_actual["recompensas"]["coral"] += recompensas["coral"]
-                estado_actual["recompensas"]["exp"] += recompensas["exp"]
+                exp_gained, level_up = add_exp(player, recompensas["exp"])
+                estado_actual["recompensas"]["exp"] += exp_gained
                 
                 if enemigo_actual == 5:  # Victory against final boss
                     await finalizar_miniboss(update, context, player, victoria=True)
@@ -268,23 +273,24 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
                 # Apply rewards
                 player.gold += estado_actual["recompensas"]["oro"]
                 player.fire_coral += estado_actual["recompensas"]["coral"]
-                player.exp += estado_actual["recompensas"]["exp"]
                 
-                # Level up logic
-                while player.exp >= exp_needed_for_level(player.level):
-                    player.exp -= exp_needed_for_level(player.level)
-                    player.level += 1
-                    new_stats = initialize_combat_stats(player.level)
-                    player.update_combat_stats(new_stats)
+                # Use the new add_exp function for exp and level up
+                exp_gained, leveled_up = add_exp(player, estado_actual["recompensas"]["exp"])
                 
                 mensaje = (
                     f"{'🏃 Te has retirado' if retirada else '🎉 ¡MiniBoss Completado!'}\n\n"
                     f"Recompensas finales:\n"
                     f"💰 Oro: {estado_actual['recompensas']['oro']}\n"
                     f"🌺 Coral de Fuego: {estado_actual['recompensas']['coral']}\n"
-                    f"💫 EXP: {estado_actual['recompensas']['exp']}\n\n"
-                    f"⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"
+                    f"💫 EXP: {exp_gained}\n"
                 )
+
+                if leveled_up:
+                    mensaje += f"🆙 ¡Has subido de nivel! Nuevo nivel: {player.combat_stats['level']}\n"
+                
+                mensaje += f"\n⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"
+                
+
                 keyboard = [[InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")]]
             else:
                 mensaje = f"❌ ¡Has sido derrotado! No recibes recompensas.\n\n⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"
@@ -369,19 +375,3 @@ async def retry_miniboss_battle(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"Error in retry_miniboss_battle: {e}")
         await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
 
-def exp_needed_for_level(level: int) -> int:
-    """Calculate experience needed for next level."""
-    return int(100 * (1.5 ** level))
-
-def initialize_combat_stats(level: int) -> dict:
-    """Initialize combat stats for a given level."""
-    return {
-        "level": level,
-        "hp": 100 + (level * 10),
-        "atk": 10 + (level * 2),
-        "mp": 50 + (level * 5),
-        "def_p": 5 + (level * 1.5),
-        "def_m": 5 + (level * 1.5),
-        "agi": 10 + (level * 1),
-        "sta": 100 + (level * 5)
-    }

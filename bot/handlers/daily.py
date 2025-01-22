@@ -1,12 +1,17 @@
 # handlers/daily.py
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-import time
+
+# Standard library imports
 import random
-import logging
+import time
 from datetime import datetime, timedelta
+
+# Third-party imports
 import pytz
-from telegram.ext import CommandHandler
+from sqlalchemy import cast, String
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CommandHandler, ContextTypes
+
+# Local imports
 from .premium import distribute_weekly_tickets
 from bot.config.settings import (
     DAILY_REWARDS,
@@ -17,10 +22,11 @@ from bot.config.settings import (
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
-from database.db.game_db import get_player, Session
+from bot.utils.game_mechanics import add_exp
+from database.db.game_db import get_player, Session, update_player
 from database.models import Player
-from sqlalchemy import cast, String
 
+# Function definitions 
 def get_next_midnight_cet():
     cet = pytz.timezone('CET')
     now = datetime.now(cet)
@@ -93,8 +99,10 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             player.combat_stats['fire_coral'] += coral
             player.comida += comida
             player.mascota['energia'] = rewards['energia']  # Full energy restore
-            player.combat_stats['exp'] += exp
             player.fragmento_del_destino = player.fragmento_del_destino + tickets
+
+            # Use the new add_exp function for exp gain and level up
+            level_up_message = add_exp(player, exp)
 
             # Check for weekly premium tickets
             premium_ticket_message = ""
@@ -109,7 +117,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             player.daily_reward['last_claim'] = current_time.timestamp()
 
             # Save changes to the database
-            session.commit()
+            update_player(session, player)
 
             # Prepare response message
             message = SUCCESS_MESSAGES["daily_reward"].format(
@@ -122,6 +130,8 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 message += "\n" + SUCCESS_MESSAGES["daily_reward_premium"].format(
                     premium_ticket_message if premium_ticket_message else ""
                 )
+            if level_up_message:
+                message += f"\n\n{level_up_message}"
 
             # Add streak progress information
             next_streak_bonus = None
@@ -141,7 +151,6 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await send_message(update, message, reply_markup=reply_markup)
-
         except Exception as e:
             logger.error(f"Error in claim_daily_reward: {str(e)}", exc_info=True)
             await send_message(update, ERROR_MESSAGES["daily_reward_error"])

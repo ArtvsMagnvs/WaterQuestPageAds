@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import DateTime
 from datetime import datetime
+from bot.utils.game_mechanics import add_exp
 
 Base = declarative_base()
 
@@ -31,12 +32,17 @@ class Player(Base):
     })
 
     combat_stats = Column(JSON, default={
-    "nivel": 1,
-    "vida": 100,
-    "ataque": 10,
-    "exp": 0,
-    "fire_coral": 0
-})
+        "level": 1,
+        "hp": 100,
+        "atk": 10,
+        "mp": 50,
+        "def_p": 5,
+        "def_m": 5,
+        "agi": 10,
+        "sta": 100,
+        "exp": 0,
+        "exp_to_next_level": 100
+    })
 
     premium_features = Column(JSON, default={
         "premium_status": False,
@@ -75,13 +81,19 @@ class Player(Base):
             "nivel": 1,
             "oro": 0,
             "oro_hora": 1,
+            "fire_coral": 0,
         }
         self.combat_stats = {
-            "nivel": 1,
-            "vida": 100,
-            "ataque": 10,
+            "level": 1,
+            "hp": 100,
+            "atk": 10,
+            "mp": 50,
+            "def_p": 5,
+            "def_m": 5,
+            "agi": 10,
+            "sta": 100,
             "exp": 0,
-            "fire_coral": 0
+            "exp_to_next_level": 100
         }
         self.premium_features = {
             "premium_status": False,
@@ -98,6 +110,18 @@ class Player(Base):
             "attempts_today": 0,
             "last_attempt_date": None
         }
+
+    def add_combat_exp(self, exp_gained: int):
+        """
+        Add combat experience to the player.
+        
+        Args:
+        exp_gained (int): The amount of experience to add.
+
+        Returns:
+        tuple: (bool, str) - (True if leveled up, message describing the result)
+        """
+        return add_exp(self, exp_gained)
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

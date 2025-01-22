@@ -1,13 +1,20 @@
 # handlers/combat.py
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
+# Standard library imports
 import random
 from datetime import datetime
 import logging
+
+# Third-party imports
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+
+# Local application imports
 from database.db.game_db import Session, Player
 from database.db import save_player
-
+from bot.utils.game_mechanics import exp_needed_for_level
+from bot.utils.keyboard import generar_botones
+from bot.utils.save_system import save_game_data
 from bot.config.settings import (
     SUCCESS_MESSAGES, 
     ERROR_MESSAGES, 
@@ -17,9 +24,9 @@ from bot.config.settings import (
     EXP_MULTIPLIER,
     GOLD_PER_LEVEL
 )
-from bot.utils.keyboard import generar_botones
-from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
+
+# Rest of the file content...
 
 def calculate_rewards(enemy_level: int, is_premium: bool) -> dict:
     """Calculate rewards for combat victory."""
@@ -39,7 +46,6 @@ def calculate_rewards(enemy_level: int, is_premium: bool) -> dict:
         "coral": coral_gain
     }
 
-def exp_needed_for_level(level: int) -> int:
     """Calculate experience needed for next level."""
     return int(100 * (1.5 ** level))
 
@@ -111,15 +117,21 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 rewards = calculate_rewards(enemy_level, is_premium)
 
                 # Update stats
-                stats["exp"] += rewards["exp"]
                 player.mascota["oro_hora"] += rewards["gold_per_min"]
                 stats["fire_coral"] += rewards["coral"]
 
-                # Level up check
-                while stats["exp"] >= exp_needed_for_level(stats["level"]):
-                    stats["exp"] -= exp_needed_for_level(stats["level"])
-                    stats["level"] += 1
-                    
+                # Add experience using the new add_exp method
+                leveled_up, exp_message = player.add_combat_exp(rewards["exp"])
+
+                message = (
+                    f"🗡 ¡Victoria!\n"
+                    f"{exp_message}\n"
+                    f"💰 Oro por minuto +{rewards['gold_per_min']}\n"
+                    f"🌺 Coral de Fuego +{rewards['coral']}"
+                )
+
+                if leveled_up:
+                    message += f"\n\n🎉 ¡Subiste al nivel {stats['level']}!"
                     # Update combat stats on level up
                     level = stats["level"]
                     stats.update({
@@ -130,16 +142,6 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "def_m": 5 + (level * 1.5),
                         "agi": 10 + (level * 1)
                     })
-
-                message = (
-                    f"🗡 ¡Victoria!\n"
-                    f"💫 EXP ganada: {rewards['exp']}\n"
-                    f"💰 Oro por minuto +{rewards['gold_per_min']}\n"
-                    f"🌺 Coral de Fuego +{rewards['coral']}"
-                )
-
-                if stats["level"] > player_level:  # If leveled up
-                    message += f"\n\n🎉 ¡Subiste al nivel {stats['level']}!"
             else:
                 message = "❌ ¡Derrota! Mejor suerte la próxima vez."
 
