@@ -6,8 +6,6 @@ import json
 import os
 import logging
 
-from database import Session, get_player, create_player,  get_all_players
-
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)

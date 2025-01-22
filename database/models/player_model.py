@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import DateTime
 from datetime import datetime
-from bot.utils.game_mechanics import add_exp
+
 
 Base = declarative_base()
 
@@ -121,6 +121,7 @@ class Player(Base):
         Returns:
         tuple: (bool, str) - (True if leveled up, message describing the result)
         """
+        from bot.utils.game_mechanics import add_exp
         return add_exp(self, exp_gained)
 
     def to_dict(self):
