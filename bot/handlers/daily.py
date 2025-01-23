@@ -99,7 +99,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             player.combat_stats['fire_coral'] += coral
             player.comida += comida
             player.mascota['energia'] = rewards['energia']  # Full energy restore
-            player.fragmento_del_destino = player.fragmento_del_destino + tickets
+            player.fragmento_del_destino += tickets
 
             # Use the new add_exp function for exp gain and level up
             level_up_message = add_exp(player, exp)
@@ -117,7 +117,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             player.daily_reward['last_claim'] = current_time.timestamp()
 
             # Save changes to the database
-            update_player(session, player)
+            update_player(user_id, player.to_dict())
 
             # Prepare response message
             message = SUCCESS_MESSAGES["daily_reward"].format(
