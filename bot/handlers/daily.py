@@ -117,7 +117,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             player.daily_reward['last_claim'] = current_time.timestamp()
 
             # Save changes to the database
-            update_player(user_id, player.to_dict())
+            update_player(session, user_id, player.to_dict())
 
             # Prepare response message
             message = SUCCESS_MESSAGES["daily_reward"].format(
