@@ -15,6 +15,21 @@ if db_url.startswith("postgres://"):
 engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
 
+from contextlib import contextmanager
+
+@contextmanager
+def db_session():
+    session = Session()
+    try:
+        yield session
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+
 def get_player(session, user_id):
     """Retrieve a player from the database."""
     return session.query(Player).filter(Player.id == user_id).first()
@@ -60,12 +75,8 @@ def update_player(session, user_id, update_data):
         if player:
             for key, value in update_data.items():
                 setattr(player, key, value)
-            session.commit()
             return player
         else:
             return None
     except Exception as e:
-        session.rollback()
         raise e
-    finally:
-        session.close()

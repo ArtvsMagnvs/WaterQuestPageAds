@@ -23,7 +23,7 @@ from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
 from bot.utils.game_mechanics import add_exp
-from database.db.game_db import get_player, Session, update_player
+from database.db.game_db import db_session, get_player, Session, update_player
 from database.models import Player
 
 # Function definitions 
@@ -39,8 +39,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         user_id = update.effective_user.id
         
-        session = Session()
-        try:
+        with db_session() as session:
             player = get_player(session, user_id)
             
             if not player:
@@ -151,13 +150,9 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await send_message(update, message, reply_markup=reply_markup)
-        except Exception as e:
-            logger.error(f"Error in claim_daily_reward: {str(e)}", exc_info=True)
-            await send_message(update, ERROR_MESSAGES["daily_reward_error"])
-        finally:
-            session.close()
+
     except Exception as e:
-        logger.error(f"Outer error in claim_daily_reward: {str(e)}", exc_info=True)
+        logger.error(f"Error in claim_daily_reward: {str(e)}", exc_info=True)
         await send_message(update, ERROR_MESSAGES["daily_reward_error"])
 
 async def send_message(update: Update, text: str, reply_markup=None):
