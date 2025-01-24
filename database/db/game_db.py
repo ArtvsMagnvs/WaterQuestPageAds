@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database.models.player_model import Base, Player
-from bot.utils.game_mechanics import initialize_combat_stats
 import os
 import logging
 
@@ -31,9 +30,14 @@ def db_session():
         session.close()
 
 
+def get_initialize_combat_stats():
+    from bot.utils.game_mechanics import initialize_combat_stats
+    return initialize_combat_stats
+
 def get_player(session, user_id):
     player = session.query(Player).filter_by(id=user_id).first()
     if player and not player.combat_stats:
+        initialize_combat_stats = get_initialize_combat_stats()
         player.combat_stats = initialize_combat_stats(1)
         session.commit()
     return player
