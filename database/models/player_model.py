@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import DateTime
+from bot.utils.game_mechanics import initialize_combat_stats
 from datetime import datetime
 
 
@@ -14,6 +15,7 @@ class Player(Base):
     nombre = Column(String, nullable=False)
     nivel = Column(Integer, default=1)
     nivel_combate = Column(Integer, default=1)
+    combat_stats = Column(JSON, default=lambda: initialize_combat_stats(1))
     oro_por_minuto = Column(Float, default=1.0)
     inventario = Column(JSON, default={})
     fire_coral = Column(Integer, default=0)
