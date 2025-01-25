@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import DateTime
-from bot.utils.combat_utils import initialize_combat_stats
+from bot.utils.game_mechanics import initialize_combat_stats
 from datetime import datetime
 
 

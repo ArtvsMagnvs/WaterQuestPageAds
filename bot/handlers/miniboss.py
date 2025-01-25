@@ -21,8 +21,7 @@ from bot.config.settings import (
 from bot.config.premium_settings import PREMIUM_FEATURES
 from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data, initialize_new_player
-from bot.utils.game_mechanics import add_exp
-from bot.utils.combat_utils import exp_needed_for_level, initialize_combat_stats
+from bot.utils.game_mechanics import exp_needed_for_level, initialize_combat_stats, add_exp
 from bot.handlers.ads import retry_combat_ad
 from database.db.game_db import Session, get_player, save_player, update_player
 
