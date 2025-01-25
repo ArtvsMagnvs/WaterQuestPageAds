@@ -11,7 +11,8 @@ from .keyboard import (
 )
 from .save_system import save_game_data, load_game_data, backup_data, get_save_info
 
-from .game_mechanics import initialize_combat_stats, add_exp, exp_needed_for_level
+from .game_mechanics import add_exp
+from .combat_utils import initialize_combat_stats, exp_needed_for_level
 
 # Comment out TON SDK related imports
 # from .ton_utils import (
