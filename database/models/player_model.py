@@ -111,19 +111,6 @@ class Player(Base):
             "last_attempt_date": None
         }
 
-    def add_combat_exp(self, exp_gained: int):
-        """
-        Add combat experience to the player.
-        
-        Args:
-        exp_gained (int): The amount of experience to add.
-
-        Returns:
-        tuple: (bool, str) - (True if leveled up, message describing the result)
-        """
-        from bot.utils.game_mechanics import add_exp
-        return add_exp(self, exp_gained)
-
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 

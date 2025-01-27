@@ -1,5 +1,7 @@
 
 
+from database.models.player_model import Player
+
 
 
 
@@ -76,3 +78,17 @@ def add_exp(player, exp_gained: int):
 def exp_needed_for_level(level: int) -> int:
     """Calculate the experience needed for the next level."""
     return int(100 * (1.5 ** level))
+
+
+def add_combat_exp(player: Player, exp_gained: int):
+    """
+    Add combat experience to the player.
+    
+    Args:
+    player (Player): The player object to update.
+    exp_gained (int): The amount of experience to add.
+
+    Returns:
+    tuple: (bool, str) - (True if leveled up, message describing the result)
+    """
+    return add_exp(player, exp_gained)
