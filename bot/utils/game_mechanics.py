@@ -1,5 +1,5 @@
 
-
+from bot.config.settings import logger
 from database.models.player_model import Player
 
 
@@ -21,8 +21,6 @@ def initialize_combat_stats(level: int) -> dict:
         "exp_to_next_level": exp_needed_for_level(level)
     }
 
-from bot.config.settings import logger
-
 def add_exp(player, exp_gained: int):
     """
     Add experience to the player's combat stats and level up if necessary.
@@ -36,8 +34,18 @@ def add_exp(player, exp_gained: int):
     """
     try:
         combat_stats = player.combat_stats
-        if 'exp' not in combat_stats:
-            combat_stats['exp'] = 0
+        if not isinstance(combat_stats, dict):
+            logger.warning(f"Invalid combat_stats for player {player.id}. Reinitializing.")
+            combat_stats = initialize_combat_stats(player.nivel_combate)
+
+        # Ensure all necessary keys are present
+        required_keys = ['exp', 'level', 'exp_to_next_level', 'hp', 'atk', 'mp', 'def_p', 'def_m', 'agi', 'sta']
+        for key in required_keys:
+            if key not in combat_stats:
+                logger.warning(f"Missing key '{key}' in combat_stats for player {player.id}. Reinitializing.")
+                combat_stats = initialize_combat_stats(player.nivel_combate)
+                break
+
         combat_stats['exp'] += exp_gained
         leveled_up = False
         level_up_message = ""
@@ -80,7 +88,6 @@ def add_exp(player, exp_gained: int):
 def exp_needed_for_level(level: int) -> int:
     """Calculate the experience needed for the next level."""
     return int(100 * (1.5 ** level))
-
 
 def add_combat_exp(player: Player, exp_gained: int):
     """
