@@ -36,6 +36,8 @@ def add_exp(player, exp_gained: int):
     """
     try:
         combat_stats = player.combat_stats
+        if 'exp' not in combat_stats:
+            combat_stats['exp'] = 0
         combat_stats['exp'] += exp_gained
         leveled_up = False
         level_up_message = ""
@@ -73,7 +75,7 @@ def add_exp(player, exp_gained: int):
 
     except Exception as e:
         logger.error(f"Error in add_exp function: {e}")
-        return False, "Ocurrió un error al añadir experiencia."
+        return False, f"Ocurrió un error al añadir experiencia: {str(e)}"
 
 def exp_needed_for_level(level: int) -> int:
     """Calculate the experience needed for the next level."""
