@@ -5,8 +5,7 @@ from pathlib import Path
 import logging
 
 # Bot Configuration
-#TOKEN = "7988081838:AAH7IHTa4g5cJv3z6Qq9_9xoNfv8Ch0IHSg"
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 
 # Save System Settings
 SAVE_FILE = 'game_data.json'

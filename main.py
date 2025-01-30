@@ -216,6 +216,112 @@ async def button(update: Update, context: CallbackContext):
         elif update.message:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
 
+
+
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle errors."""
+    logger.error(f"Error occurred: {context.error}")
+    try:
+        if update and update.effective_message:
+            if update.callback_query and update.callback_query.message:
+                await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
+            elif update.message:
+                await update.message.reply_text(ERROR_MESSAGES["generic_error"])
+    except Exception as e:
+        logger.error(f"Error in error handler: {e}")
+
+async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
+    """Periodic save job."""
+    try:
+        if 'players' in context.bot_data:
+            save_game_data(context.bot_data['players'])
+            logger.info("Auto-save completed")
+    except Exception as e:
+        logger.error(f"Error in save game job: {e}")
+
+def main():
+    """Start the bot."""
+    try:
+        # Create application
+        application = Application.builder().token(TOKEN).build()
+
+        # Initialize players data
+        application.bot_data['players'] = load_game_data()
+
+        # Add command handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("stats", stats_command))
+        
+        # Add callback query handler
+        application.add_handler(CallbackQueryHandler(button))
+        
+        # Add error handler
+        application.add_error_handler(error_handler)
+
+        # Add premmium items
+        application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
+
+        # Add periodic jobs
+        application.job_queue.run_repeating(
+            save_game_job,
+            interval=300,  # Every 5 minutes
+            first=300
+        )
+
+        # Add weekly ticket check job
+        application.job_queue.run_repeating(
+            check_weekly_tickets,
+            interval=86400,  # Check daily
+            first=10
+)
+
+        # Add premium expiry check
+        application.job_queue.run_repeating(
+            check_premium_expiry,
+            interval=3600,  # Every hour
+            first=10
+        )
+
+        # Add daily reset check
+        application.job_queue.run_repeating(
+            check_daily_reset,
+            interval=21600,  # Every 6 hours
+            first=10
+        )
+ 
+        # Start the bot
+        print("Bot iniciado...")
+        application.run_polling()
+
+        return application  # Return the application for cleanup
+
+    except Exception as e:
+        logger.error(f"Error starting bot: {e}")
+        return None
+
+if __name__ == '__main__':
+    app = None
+    try:
+        app = main()
+    except KeyboardInterrupt:
+        print("\nBot detenido manualmente")
+    finally:
+        # Save data on shutdown if application was created
+        if app and hasattr(app, 'bot_data') and 'players' in app.bot_data:
+            save_game_data(app.bot_data['players'])
+            backup_data(app.bot_data['players'])
+            print("Datos guardados. ¡Hasta luego!")
+
+
+
+
+
+
+
+
+#====================================================================================================
+
 # WaterQuest Functions
 """ async def show_waterquest_menu(update: Update, context: CallbackContext):
 #    Display available WaterQuests.
@@ -343,98 +449,3 @@ async def process_quest_choice(update: Update, context: CallbackContext, choice_
 
 
 # ... (resto de funciones existentes) ...
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle errors."""
-    logger.error(f"Error occurred: {context.error}")
-    try:
-        if update and update.effective_message:
-            if update.callback_query and update.callback_query.message:
-                await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"])
-            elif update.message:
-                await update.message.reply_text(ERROR_MESSAGES["generic_error"])
-    except Exception as e:
-        logger.error(f"Error in error handler: {e}")
-
-async def save_game_job(context: ContextTypes.DEFAULT_TYPE):
-    """Periodic save job."""
-    try:
-        if 'players' in context.bot_data:
-            save_game_data(context.bot_data['players'])
-            logger.info("Auto-save completed")
-    except Exception as e:
-        logger.error(f"Error in save game job: {e}")
-
-def main():
-    """Start the bot."""
-    try:
-        # Create application
-        application = Application.builder().token(TOKEN).build()
-
-        # Initialize players data
-        application.bot_data['players'] = load_game_data()
-
-        # Add command handlers
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("stats", stats_command))
-        
-        # Add callback query handler
-        application.add_handler(CallbackQueryHandler(button))
-        
-        # Add error handler
-        application.add_error_handler(error_handler)
-
-        # Add premmium items
-        application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
-
-        # Add periodic jobs
-        application.job_queue.run_repeating(
-            save_game_job,
-            interval=300,  # Every 5 minutes
-            first=300
-        )
-
-        # Add weekly ticket check job
-        application.job_queue.run_repeating(
-            check_weekly_tickets,
-            interval=86400,  # Check daily
-            first=10
-)
-
-        # Add premium expiry check
-        application.job_queue.run_repeating(
-            check_premium_expiry,
-            interval=3600,  # Every hour
-            first=10
-        )
-
-        # Add daily reset check
-        application.job_queue.run_repeating(
-            check_daily_reset,
-            interval=21600,  # Every 6 hours
-            first=10
-        )
- 
-        # Start the bot
-        print("Bot iniciado...")
-        application.run_polling()
-
-        return application  # Return the application for cleanup
-
-    except Exception as e:
-        logger.error(f"Error starting bot: {e}")
-        return None
-
-if __name__ == '__main__':
-    app = None
-    try:
-        app = main()
-    except KeyboardInterrupt:
-        print("\nBot detenido manualmente")
-    finally:
-        # Save data on shutdown if application was created
-        if app and hasattr(app, 'bot_data') and 'players' in app.bot_data:
-            save_game_data(app.bot_data['players'])
-            backup_data(app.bot_data['players'])
-            print("Datos guardados. ¡Hasta luego!")
