@@ -19,27 +19,59 @@ from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
 
-def calculate_rewards(enemy_level: int, is_premium: bool) -> dict:
-    """Calculate rewards for combat victory."""
-    base_exp = int(10 * (EXP_MULTIPLIER ** enemy_level))
-    base_gold_per_min = max(1, int(enemy_level * GOLD_PER_LEVEL))
-    coral_gain = random.randint(1, 3)
+def calculate_rewards(enemy_level: int, player_level: int, is_premium: bool = False):
+    """Calculate rewards based on enemy level and player level."""
+    base_exp = 10 + (enemy_level * 5)
+    base_gold_per_min = 1 + (enemy_level * 0.5)
+    base_coral = 1 + (enemy_level // 5)
 
-    # Premium users get 1.5x rewards
+    # Ajuste progresivo basado en el nivel del jugador
+    level_multiplier = 1 + (player_level * 0.05)  # 5% de aumento por nivel
+
+    exp = int(base_exp * level_multiplier)
+    gold_per_min = round(base_gold_per_min * level_multiplier, 2)
+    coral = int(base_coral * level_multiplier)
+
+    # Bono premium
     if is_premium:
-        base_exp = int(base_exp * 1.5)
-        base_gold_per_min = int(base_gold_per_min * 1.5)
-        coral_gain = int(coral_gain * 1.5)
+        exp = int(exp * 1.5)
+        gold_per_min = round(gold_per_min * 1.5, 2)
+        coral = int(coral * 1.5)
 
     return {
-        "exp": base_exp,
-        "gold_per_min": base_gold_per_min,
-        "coral": coral_gain
+        "exp": exp,
+        "gold_per_min": gold_per_min,
+        "coral": coral
     }
 
 def exp_needed_for_level(level: int) -> int:
     """Calculate experience needed for next level."""
     return int(100 * (1.5 ** level))
+
+def calculate_rewards(enemy_level: int, combat_level: int, is_premium: bool = False):
+    """Calculate rewards based on enemy level and player's combat level."""
+    base_exp = 10 + (enemy_level * 5)
+    base_gold_per_min = 1 + (enemy_level * 0.5)
+    base_coral = 1 + (enemy_level // 5)
+
+    # Progressive adjustment based on combat level
+    level_multiplier = 1 + (combat_level * 0.05)  # 5% increase per combat level
+
+    exp = int(base_exp * level_multiplier)
+    gold_per_min = round(base_gold_per_min * level_multiplier, 2)
+    coral = int(base_coral * level_multiplier)
+
+    # Premium bonus
+    if is_premium:
+        exp = int(exp * 1.5)
+        gold_per_min = round(gold_per_min * 1.5, 2)
+        coral = int(coral * 1.5)
+
+    return {
+        "exp": exp,
+        "gold_per_min": gold_per_min,
+        "coral": coral
+    }
 
 async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle quick combat encounters."""
@@ -88,9 +120,9 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             return
 
-        # Generate enemy based on player level
-        player_level = stats["level"]
-        enemy_level = max(0, player_level - 1 + random.randint(0, 2))
+        # Generate enemy based on player's combat level
+        combat_level = stats["level"]
+        enemy_level = max(0, combat_level - 1 + random.randint(0, 2))
         
         # Calculate battle result (base 75% win rate + agility bonus)
         victory_chance = 0.75 + (stats["agi"] / 1000)  # Agility gives small bonus
@@ -99,12 +131,28 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if victory:
             # Calculate rewards
             is_premium = player.get('premium_features', {}).get('premium_status', False)
-            rewards = calculate_rewards(enemy_level, is_premium)
+            rewards = calculate_rewards(enemy_level, combat_level, is_premium)
 
             # Update stats
             stats["exp"] += rewards["exp"]
             player["mascota"]["oro_hora"] += rewards["gold_per_min"]
             stats["fire_coral"] += rewards["coral"]
+
+            # Level up check
+            while stats["exp"] >= exp_needed_for_level(stats["level"]):
+                stats["exp"] -= exp_needed_for_level(stats["level"])
+                stats["level"] += 1
+                
+                # Update combat stats on level up
+                level = stats["level"]
+                stats.update({
+                    "hp": 100 + (level * 10),
+                    "atk": 10 + (level * 2),
+                    "mp": 50 + (level * 5),
+                    "def_p": 5 + (level * 1.5),
+                    "def_m": 5 + (level * 1.5),
+                    "agi": 10 + (level * 1)
+                })
 
             message = (
                 f"🗡 ¡Victoria!\n"
@@ -113,15 +161,8 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🌺 Coral de Fuego +{rewards['coral']}"
             )
 
-            # Level up check
-            while stats["exp"] >= exp_needed_for_level(stats["level"]):
-                stats["exp"] -= exp_needed_for_level(stats["level"])
-                stats["level"] += 1
-                stats = update_stats_on_level_up(stats)
-
-                message += f"\n\n🎉 ¡Subiste al nivel {stats['level']}!"
-                message += f"\nNuevos stats: HP {stats['hp']}, ATK {stats['atk']}, MP {stats['mp']}, DEF_P {stats['def_p']}, DEF_M {stats['def_m']}, AGI {stats['agi']}"
-
+            if stats["level"] > combat_level:  # If leveled up
+                message += f"\n\n🎉 ¡Subiste al nivel de combate {stats['level']}!"
         else:
             message = "❌ ¡Derrota! Mejor suerte la próxima vez."
 
@@ -151,6 +192,7 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"], reply_markup=generar_botones())
         else:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"], reply_markup=generar_botones())
+
 
 def exp_needed_for_level(level: int) -> int:
     """Calculate the experience needed for the next level."""
