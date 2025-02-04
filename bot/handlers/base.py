@@ -59,7 +59,7 @@ def initialize_new_player():
             "auto_collector": False,
             "auto_collector_expires": 0,
             "daily_bonus": False,
-            "lucky_tickets": 0
+            "tickets": 100
         }
     }
 

@@ -19,6 +19,31 @@ from bot.utils.save_system import save_game_data
 from bot.handlers.shop import comprar_fragmentos
 
 
+def give_free_tickets_to_new_player(player):
+    """
+    Give 100 free tickets to a new player.
+    This function should be called when initializing a new player.
+    """
+    if 'premium_features' not in player:
+        player['premium_features'] = {}
+    
+    if 'tickets' not in player['premium_features']:
+        player['premium_features']['tickets'] = 100
+    else:
+        # If the player already has tickets, we'll add to them
+        player['premium_features']['tickets'] += 100
+
+    # Initialize portal stats if not present
+    if 'portal_stats' not in player:
+        player['portal_stats'] = {
+            'total_spins': 0,
+            'spins_since_legendary': 0,
+            'spins_since_epic': 0,
+            'spins_since_rare': 0
+        }
+
+    return player
+
 PORTAL_REWARDS = {
     "legendary": {  # 1% probabilidad
         "rewards": [

@@ -63,6 +63,10 @@ from bot.handlers.ads import (
     retry_combat_ad
 )
 
+# Imports from Portal free Tickets for New Players
+from bot.handlers.base import initialize_new_player
+from bot.handlers.portal import give_free_tickets_to_new_player
+
 def initialize_new_player():
     """Initialize data for a new player."""
     return {
@@ -95,7 +99,14 @@ def initialize_new_player():
         },
     }
 
-
+def create_new_player(user_id, context):
+    new_player = initialize_new_player()
+    new_player = give_free_tickets_to_new_player(new_player)
+    context.bot_data['players'][user_id] = new_player
+    save_game_data(context.bot_data['players'])
+    new_player = give_free_tickets_to_new_player(new_player)
+    context.bot_data['players'][user_id] = new_player
+    save_game_data(context.bot_data['players'])
 
 
 async def start(update: Update, context: CallbackContext):
