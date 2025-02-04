@@ -244,22 +244,32 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
             player["mascota"]["oro"] += estado_actual["recompensas"]["oro"]
             player["combat_stats"]["fire_coral"] += estado_actual["recompensas"]["coral"]
             stats = player["combat_stats"]
-            stats["exp"] += estado_actual["recompensas"]["exp"]
+            exp_ganada = estado_actual["recompensas"]["exp"]
             
+            # Apply experience and check for level ups
+            stats["exp"] += exp_ganada
+            initial_level = stats["level"]
             while stats["exp"] >= exp_needed_for_level(stats["level"]):
                 stats["exp"] -= exp_needed_for_level(stats["level"])
                 stats["level"] += 1
                 new_stats = initialize_combat_stats(stats["level"])
                 stats.update(new_stats)
-                
+            
+            level_ups = stats["level"] - initial_level
+            
             mensaje = (
                 f"{'🏃 Te has retirado' if retirada else '🎉 ¡MiniBoss Completado!'}\n\n"
                 f"Recompensas finales:\n"
                 f"💰 Oro: {estado_actual['recompensas']['oro']}\n"
                 f"🌺 Coral de Fuego: {estado_actual['recompensas']['coral']}\n"
-                f"💫 EXP: {estado_actual['recompensas']['exp']}\n\n"
-                f"⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"
+                f"💫 EXP: {exp_ganada}\n"
             )
+            
+            if level_ups > 0:
+                mensaje += f"\n🆙 ¡Has subido {level_ups} nivel{'es' if level_ups > 1 else ''} de combate! Nuevo nivel: {stats['level']}"
+            
+            mensaje += f"\n\n⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"
+            
             keyboard = [[InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")]]
         else:
             mensaje = f"❌ ¡Has sido derrotado! No recibes recompensas.\n\n⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"

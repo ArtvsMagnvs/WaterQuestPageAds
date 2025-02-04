@@ -20,6 +20,8 @@ from bot.utils.keyboard import generar_botones
 from bot.utils.save_system import save_game_data
 from bot.config.premium_settings import PREMIUM_FEATURES
 
+from bot.handlers.combat import exp_needed_for_level
+
 async def actualizar_estados(player):
     """Update pet's hunger, energy, and gold based on time passed."""
     try:
@@ -187,6 +189,12 @@ async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
         comida = player["comida"]
         combat_stats = player["combat_stats"]
 
+        # Calcula la experiencia necesaria para el próximo nivel
+        current_level = combat_stats['level']
+        current_exp = combat_stats['exp']
+        exp_for_next_level = exp_needed_for_level(current_level)
+        exp_remaining = exp_for_next_level - current_exp
+
         # Create status message
         estado_mensaje = (
             f"🍖 Hambre: {mascota['hambre']}\n"
@@ -197,6 +205,8 @@ async def estado(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🌾 Comida: {comida}\n"
             f"\n📊 Estadísticas de Combate:\n"
             f"🎖️ Nivel de Combate: {combat_stats['level']}\n"
+            f"💫 EXP: {current_exp}/{exp_for_next_level}\n"
+            f"📈 EXP para el próximo nivel: {exp_remaining}\n"
             f"🌺 Coral de Fuego: {combat_stats['fire_coral']}\n"
             f"⚔️ Batallas hoy: {combat_stats['battles_today']}/20"
         )

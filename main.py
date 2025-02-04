@@ -87,6 +87,19 @@ def initialize_new_player():
             "streak": 1,
             "last_weekly_tickets": 0
         },
+        "combat_stats": {
+            "level": 1,
+            "exp": 0,
+            "hp": 100,
+            "atk": 10,
+            "mp": 50,
+            "def_p": 5,
+            "def_m": 5,
+            "agi": 10,
+            "battles_today": 0,
+            "last_battle_date": str(datetime.now().date()),
+            "fire_coral": 0
+        },
         "premium_features": {
             "premium_status": False,
             "premium_status_expires": 0,

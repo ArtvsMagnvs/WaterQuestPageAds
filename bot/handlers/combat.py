@@ -106,22 +106,6 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             player["mascota"]["oro_hora"] += rewards["gold_per_min"]
             stats["fire_coral"] += rewards["coral"]
 
-            # Level up check
-            while stats["exp"] >= exp_needed_for_level(stats["level"]):
-                stats["exp"] -= exp_needed_for_level(stats["level"])
-                stats["level"] += 1
-                
-                # Update combat stats on level up
-                level = stats["level"]
-                stats.update({
-                    "hp": 100 + (level * 10),
-                    "atk": 10 + (level * 2),
-                    "mp": 50 + (level * 5),
-                    "def_p": 5 + (level * 1.5),
-                    "def_m": 5 + (level * 1.5),
-                    "agi": 10 + (level * 1)
-                })
-
             message = (
                 f"🗡 ¡Victoria!\n"
                 f"💫 EXP ganada: {rewards['exp']}\n"
@@ -129,8 +113,15 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🌺 Coral de Fuego +{rewards['coral']}"
             )
 
-            if stats["level"] > player_level:  # If leveled up
+            # Level up check
+            while stats["exp"] >= exp_needed_for_level(stats["level"]):
+                stats["exp"] -= exp_needed_for_level(stats["level"])
+                stats["level"] += 1
+                stats = update_stats_on_level_up(stats)
+
                 message += f"\n\n🎉 ¡Subiste al nivel {stats['level']}!"
+                message += f"\nNuevos stats: HP {stats['hp']}, ATK {stats['atk']}, MP {stats['mp']}, DEF_P {stats['def_p']}, DEF_M {stats['def_m']}, AGI {stats['agi']}"
+
         else:
             message = "❌ ¡Derrota! Mejor suerte la próxima vez."
 
@@ -160,6 +151,23 @@ async def quick_combat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.reply_text(ERROR_MESSAGES["generic_error"], reply_markup=generar_botones())
         else:
             await update.message.reply_text(ERROR_MESSAGES["generic_error"], reply_markup=generar_botones())
+
+def exp_needed_for_level(level: int) -> int:
+    """Calculate the experience needed for the next level."""
+    return int(100 * (1.5 ** (level - 1)))
+
+def update_stats_on_level_up(stats: dict) -> dict:
+    """Update combat stats when leveling up."""
+    level = stats["level"]
+    stats.update({
+        "hp": 100 + (level * 10),
+        "atk": 10 + (level * 2),
+        "mp": 50 + (level * 5),
+        "def_p": 5 + (level * 1.5),
+        "def_m": 5 + (level * 1.5),
+        "agi": 10 + (level * 1)
+    })
+    return stats
 
 async def view_combat_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """View detailed combat statistics."""
