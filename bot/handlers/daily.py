@@ -103,7 +103,7 @@ async def claim_daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE)
         player['comida'] += comida
         player['mascota']['energia'] = rewards['energia']  # Full energy restore
         player['combat_stats']['exp'] += exp
-        player['fragmento_del_destino'] = player.get('tickets', 0) + tickets
+        player['premium_features']['tickets'] = player['premium_features'].get('tickets', 0) + tickets
 
         # Check for weekly premium tickets
         premium_ticket_message = ""
