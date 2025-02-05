@@ -275,8 +275,6 @@ ERROR_MESSAGES = {
 # Weekly Contest Settings
 WEEKLY_CONTEST = {
     "enabled": True,
-    "test_mode": True,  # Cambia a True para activar el modo de prueba
-    "test_duration": 60,  # Duración del concurso de prueba en segundos
 }
 
 # Success Messages

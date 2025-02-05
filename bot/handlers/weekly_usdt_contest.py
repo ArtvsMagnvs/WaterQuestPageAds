@@ -1,6 +1,7 @@
 #weekly_usdt_contest.py
 
 import random
+import asyncio
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
@@ -76,6 +77,13 @@ async def start_weekly_contest(context: ContextTypes.DEFAULT_TYPE):
     }
     context.bot_data["weekly_contest"] = contest_data
     
+    # Programar recordatorios diarios
+    for day in range(CONTEST_CONFIG["duration_days"]):
+        context.job_queue.run_once(
+            send_daily_reminder,
+            when=contest_data["start_time"] + timedelta(days=day, hours=12)
+        )
+
     # Schedule the end of the contest
     context.job_queue.run_once(end_weekly_contest, TEST_CONTEST_DURATION if TEST_MODE else timedelta(days=CONTEST_CONFIG["duration_days"]))
     
@@ -167,14 +175,6 @@ async def view_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.answer("Debes iniciar el juego primero con /start.")
         return
     
-    # Simulate ad viewing
-    if TEST_MODE:
-        await update.callback_query.answer("Anuncio simulado visto con éxito.")
-    else:
-        # Here you would integrate with your actual ad viewing system
-        # For now, we'll just simulate it
-        await update.callback_query.answer("Anuncio visto con éxito.")
-    
     # Update player's contest data
     player_contest_data = player.setdefault("contest_data", {"daily_ads": 0, "weekly_ads": 0, "tickets": 0})
     player_contest_data["daily_ads"] += 1
@@ -190,72 +190,98 @@ async def view_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Update contest participants
     contest_data["participants"][user_id] = player_contest_data["tickets"]
     
+    # Check milestone after updating the player's data
+    await check_milestone(update, context)
+    
     await update.callback_query.edit_message_text(
         f"Anuncio visto. Tienes {player_contest_data['tickets']} boletos para el concurso semanal.",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Ver Otro Anuncio", callback_data="view_ad")]])
     )
 
-def setup_weekly_contest(application):
-    """Set up the weekly contest handlers and initial job."""
-    application.add_handler(CallbackQueryHandler(view_ad, pattern="^view_ad$"))
-    
-    # Schedule the first contest
-    next_contest_time = get_next_contest_start_time()
-    application.job_queue.run_once(start_weekly_contest, next_contest_time - datetime.now())
-
-
-#================================================================================================
-# TEST COMMANDS AND HANDLERS
-#================================================================================================
-
-
-# Test command to force start a contest
-async def force_start_contest(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if TEST_MODE:
-        await start_weekly_contest(context)
-        await update.message.reply_text("Concurso de prueba iniciado.")
-    else:
-        await update.message.reply_text("El modo de prueba no está activado.")
-
-async def force_end_contest(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if TEST_MODE:
-        await end_weekly_contest(context)
-        await update.message.reply_text("Concurso de prueba finalizado.")
-    else:
-        await update.message.reply_text("El modo de prueba no está activado.")
-
-async def toggle_test_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global TEST_MODE
-    TEST_MODE = not TEST_MODE
-    await update.message.reply_text(f"Modo de prueba {'activado' if TEST_MODE else 'desactivado'}.")
-
-async def show_contest_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def send_daily_reminder(context: ContextTypes.DEFAULT_TYPE):
+    """Send a daily reminder to all participants."""
     contest_data = context.bot_data.get("weekly_contest", {})
-    if contest_data:
-        start_time = contest_data.get("start_time", "No iniciado")
-        end_time = contest_data.get("end_time", "No definido")
-        participants = len(contest_data.get("participants", {}))
-        status = f"Estado del concurso:\nInicio: {start_time}\nFin: {end_time}\nParticipantes: {participants}"
-    else:
-        status = "No hay un concurso activo en este momento."
-    await update.message.reply_text(status)
+    if not contest_data:
+        return
 
-def add_test_commands(application):
-    application.add_handler(CommandHandler("force_start_contest", force_start_contest))
-    application.add_handler(CommandHandler("force_end_contest", force_end_contest))
-    application.add_handler(CommandHandler("toggle_test_mode", toggle_test_mode))
-    application.add_handler(CommandHandler("contest_status", show_contest_status))
-    application.add_handler(CommandHandler("weekly_contest_menu", weekly_contest_menu))
+    for user_id in contest_data["participants"]:
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="🔔 ¡Recuerda participar en el concurso semanal de USDT! Mira anuncios para ganar más boletos."
+            )
+        except Exception as e:
+            logger.error(f"Error sending reminder to user {user_id}: {e}")
 
-# Asegúrate de que esta función se llame en la configuración principal de tu bot
+async def check_milestone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Check if user is close to reaching a milestone and notify them."""
+    user_id = update.effective_user.id
+    player = context.bot_data["players"].get(str(user_id))
+    if not player:
+        return
+
+    player_contest_data = player.get("contest_data", {})
+    daily_ads = player_contest_data.get("daily_ads", 0)
+    weekly_ads = player_contest_data.get("weekly_ads", 0)
+
+    if daily_ads == CONTEST_CONFIG["daily_bonus_threshold"] - 1:
+        await update.callback_query.answer("¡Estás a un anuncio de ganar el bono diario!")
+    elif weekly_ads == CONTEST_CONFIG["weekly_bonus_threshold"] - 1:
+        await update.callback_query.answer("¡Estás a un anuncio de ganar el bono semanal!")
+
+async def contest_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the current status of the contest."""
+    contest_data = context.bot_data.get("weekly_contest", {})
+    if not contest_data:
+        await update.message.reply_text("No hay un concurso activo en este momento.")
+        return
+
+    time_left = contest_data["end_time"] - datetime.now()
+    participants_count = len(contest_data["participants"])
+    total_tickets = sum(contest_data["participants"].values())
+
+    status_message = (
+        f"📊 Estado del Concurso Semanal USDT\n\n"
+        f"Tiempo restante: {time_left.days} días, {time_left.seconds // 3600} horas\n"
+        f"Participantes: {participants_count}\n"
+        f"Total de boletos: {total_tickets}\n"
+    )
+
+    await update.message.reply_text(status_message)
+
+async def show_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the current ranking of the contest."""
+    contest_data = context.bot_data.get("weekly_contest", {})
+    if not contest_data:
+        await update.message.reply_text("No hay un concurso activo en este momento.")
+        return
+
+    participants = contest_data["participants"]
+    sorted_participants = sorted(participants.items(), key=lambda x: x[1], reverse=True)
+
+    ranking_message = "🏆 Ranking del Concurso Semanal USDT\n\n"
+    for i, (user_id, tickets) in enumerate(sorted_participants[:10], start=1):
+        user = await context.bot.get_chat(user_id)
+        ranking_message += f"{i}. {user.first_name}: {tickets} boletos\n"
+
+    user_id = update.effective_user.id
+    user_rank = next((i for i, (uid, _) in enumerate(sorted_participants, start=1) if uid == user_id), None)
+    if user_rank:
+        ranking_message += f"\nTu posición: {user_rank} con {participants[user_id]} boletos"
+
+    await update.message.reply_text(ranking_message)
+
 def setup_weekly_contest(application):
     """Set up the weekly contest handlers and initial job."""
-    application.add_handler(CallbackQueryHandler(weekly_contest_menu, pattern="^weekly_contest$"))
     application.add_handler(CallbackQueryHandler(view_ad, pattern="^view_ad$"))
+    application.add_handler(CommandHandler("contest_status", contest_status))
+    application.add_handler(CommandHandler("ranking", show_ranking))
     
     # Schedule the first contest
     next_contest_time = get_next_contest_start_time()
     application.job_queue.run_once(start_weekly_contest, next_contest_time - datetime.now())
-    
-    # Add test commands
-    add_test_commands(application)
+
+    # Schedule daily reminders
+    application.job_queue.run_daily(send_daily_reminder, time=datetime.time(hour=12, minute=0, second=0))
+
+
