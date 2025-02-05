@@ -74,8 +74,7 @@ from bot.handlers.weekly_usdt_contest import (
     start_weekly_contest, 
     end_weekly_contest, 
     weekly_contest_menu,
-    add_test_commands, TEST_MODE
-    
+    TEST_MODE
 )
 
 def initialize_new_player():
