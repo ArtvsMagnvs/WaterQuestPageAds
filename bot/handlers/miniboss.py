@@ -233,7 +233,6 @@ async def retirarse_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text(ERROR_MESSAGES["generic_error"])
 
 async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE, victoria: bool, retirada: bool = False):
-    """Finalize miniboss battle sequence and award rewards."""
     try:
         user_id = update.effective_user.id
         estado_actual = miniboss_estado[user_id]
@@ -247,11 +246,12 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
             exp_ganada = estado_actual["recompensas"]["exp"]
             
             # Apply experience and check for level ups
-            stats["exp"] += exp_ganada
             initial_level = stats["level"]
+            stats["exp"] += exp_ganada
             while stats["exp"] >= exp_needed_for_level(stats["level"]):
                 stats["exp"] -= exp_needed_for_level(stats["level"])
                 stats["level"] += 1
+                # Update combat stats for the new level
                 new_stats = initialize_combat_stats(stats["level"])
                 stats.update(new_stats)
             
@@ -289,7 +289,7 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
         
         reply_markup = InlineKeyboardMarkup(keyboard)
         if update.callback_query:
-            await update.callback_query.message.reply_text(mensaje, reply_markup=reply_markup)
+            await update.callback_query.message.edit_text(mensaje, reply_markup=reply_markup)
         else:
             await update.message.reply_text(mensaje, reply_markup=reply_markup)
             
