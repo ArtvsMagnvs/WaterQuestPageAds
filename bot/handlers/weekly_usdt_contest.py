@@ -203,6 +203,12 @@ def setup_weekly_contest(application):
     next_contest_time = get_next_contest_start_time()
     application.job_queue.run_once(start_weekly_contest, next_contest_time - datetime.now())
 
+
+#================================================================================================
+# TEST COMMANDS AND HANDLERS
+#================================================================================================
+
+
 # Test command to force start a contest
 async def force_start_contest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if TEST_MODE:
@@ -211,6 +217,45 @@ async def force_start_contest(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_text("El modo de prueba no está activado.")
 
-def add_test_commands(application):
+async def force_end_contest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if TEST_MODE:
-        application.add_handler(CommandHandler("force_start_contest", force_start_contest))
+        await end_weekly_contest(context)
+        await update.message.reply_text("Concurso de prueba finalizado.")
+    else:
+        await update.message.reply_text("El modo de prueba no está activado.")
+
+async def toggle_test_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global TEST_MODE
+    TEST_MODE = not TEST_MODE
+    await update.message.reply_text(f"Modo de prueba {'activado' if TEST_MODE else 'desactivado'}.")
+
+async def show_contest_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    contest_data = context.bot_data.get("weekly_contest", {})
+    if contest_data:
+        start_time = contest_data.get("start_time", "No iniciado")
+        end_time = contest_data.get("end_time", "No definido")
+        participants = len(contest_data.get("participants", {}))
+        status = f"Estado del concurso:\nInicio: {start_time}\nFin: {end_time}\nParticipantes: {participants}"
+    else:
+        status = "No hay un concurso activo en este momento."
+    await update.message.reply_text(status)
+
+def add_test_commands(application):
+    application.add_handler(CommandHandler("force_start_contest", force_start_contest))
+    application.add_handler(CommandHandler("force_end_contest", force_end_contest))
+    application.add_handler(CommandHandler("toggle_test_mode", toggle_test_mode))
+    application.add_handler(CommandHandler("contest_status", show_contest_status))
+    application.add_handler(CommandHandler("weekly_contest_menu", weekly_contest_menu))
+
+# Asegúrate de que esta función se llame en la configuración principal de tu bot
+def setup_weekly_contest(application):
+    """Set up the weekly contest handlers and initial job."""
+    application.add_handler(CallbackQueryHandler(weekly_contest_menu, pattern="^weekly_contest$"))
+    application.add_handler(CallbackQueryHandler(view_ad, pattern="^view_ad$"))
+    
+    # Schedule the first contest
+    next_contest_time = get_next_contest_start_time()
+    application.job_queue.run_once(start_weekly_contest, next_contest_time - datetime.now())
+    
+    # Add test commands
+    add_test_commands(application)

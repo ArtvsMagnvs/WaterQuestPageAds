@@ -25,7 +25,7 @@ def generar_botones(player: Optional[dict] = None) -> InlineKeyboardMarkup:
     botones.append([InlineKeyboardButton("🌊 Portal de las Mareas 🌊", callback_data="portal")])
 
     # USDT Contests & USDT Mining
-    botones.append([InlineKeyboardButton("🏆 Concurso Semanal USDT", callback_data="weekly_contest")])
+    botones.append([InlineKeyboardButton("🏆 Concurso Semanal USDT 🏆", callback_data="weekly_contest")])
 
     
     # If player data is provided, add conditional buttons
