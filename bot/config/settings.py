@@ -272,6 +272,13 @@ ERROR_MESSAGES = {
     "message_not_found": "No se encontró el mensaje para editar. Intentando enviar uno nuevo..."
 }
 
+# Weekly Contest Settings
+WEEKLY_CONTEST = {
+    "enabled": True,
+    "test_mode": True,  # Cambia a True para activar el modo de prueba
+    "test_duration": 60,  # Duración del concurso de prueba en segundos
+}
+
 # Success Messages
 SUCCESS_MESSAGES = {
     # Basic Game Messages
@@ -327,6 +334,8 @@ SUCCESS_MESSAGES = {
         "¡Tu producción de oro crecerá más rápido que nunca!"
     )
 }
+
+
 
 # Feature Flags
 FEATURES = {

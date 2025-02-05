@@ -67,6 +67,17 @@ from bot.handlers.ads import (
 from bot.handlers.base import initialize_new_player
 from bot.handlers.portal import give_free_tickets_to_new_player
 
+
+#weekly contest test mode
+from bot.handlers.weekly_usdt_contest import (
+    setup_weekly_contest, 
+    start_weekly_contest, 
+    end_weekly_contest, 
+    weekly_contest_menu,
+    add_test_commands, TEST_MODE
+    
+)
+
 def initialize_new_player():
     """Initialize data for a new player."""
     return {
@@ -222,6 +233,8 @@ async def button(update: Update, context: CallbackContext):
             await retry_combat_ad(update, context, combat_type)
         elif query.data == "premium_shop":
             await premium_shop(update, context)
+        elif query.data == "weekly_contest":
+            await weekly_contest_menu(update, context)
         elif query.data == "comprar_fragmentos":
             await comprar_fragmentos(update, context)
         else:
@@ -277,6 +290,7 @@ def main():
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("stats", stats_command))
         
+        
         # Add callback query handler
         application.add_handler(CallbackQueryHandler(button))
         
@@ -285,6 +299,12 @@ def main():
 
         # Add premmium items
         application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
+
+        setup_weekly_contest(application)
+    
+        # Add test commands if in test mode
+        if TEST_MODE:
+            add_test_commands(application)
 
         # Add periodic jobs
         application.job_queue.run_repeating(
@@ -306,6 +326,8 @@ def main():
             interval=3600,  # Every hour
             first=10
         )
+        
+        
 
         # Add daily reset check
         application.job_queue.run_repeating(
@@ -313,6 +335,21 @@ def main():
             interval=21600,  # Every 6 hours
             first=10
         )
+
+        # Añade estos jobs después de los otros jobs existentes
+        application.job_queue.run_repeating(
+        start_weekly_contest,
+        interval=604800,  # Una semana en segundos
+        first=10
+        )
+
+        application.job_queue.run_repeating(
+        end_weekly_contest,
+        interval=604800,  # Una semana en segundos
+        first=604810  # Una semana + 10 segundos después del inicio
+        )
+
+        
  
         # Start the bot
         print("Bot iniciado...")
