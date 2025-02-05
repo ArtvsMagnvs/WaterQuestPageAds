@@ -14,6 +14,7 @@ from datetime import datetime
 from bot.handlers.base import initialize_combat_stats
 from bot.handlers.ads import register_handlers
 from bot.handlers.shop import premium_shop, get_premium_item, comprar_fragmentos
+from telegram.ext import JobQueue
 
 # Import configurations and save system
 from bot.config.settings import (
@@ -301,9 +302,9 @@ def main():
 
         setup_weekly_contest(application)
     
-        # Add test commands if in test mode
-        if TEST_MODE:
-            add_test_commands(application)
+        # Set up the weekly contest
+        job_queue = application.job_queue
+        job_queue.run_once(setup_weekly_contest, when=1)  # Run setup immediately
 
         # Add periodic jobs
         application.job_queue.run_repeating(
