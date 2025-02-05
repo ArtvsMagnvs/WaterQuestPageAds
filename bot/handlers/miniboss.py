@@ -249,11 +249,13 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
             initial_level = stats["level"]
             stats["exp"] += exp_ganada
             while stats["exp"] >= exp_needed_for_level(stats["level"]):
-                stats["exp"] -= exp_needed_for_level(stats["level"])
                 stats["level"] += 1
-                # Update combat stats for the new level
+                stats["exp"] -= exp_needed_for_level(stats["level"] - 1)
+                # Update other combat stats for the new level
                 new_stats = initialize_combat_stats(stats["level"])
-                stats.update(new_stats)
+                stats["hp"] = new_stats["hp"]
+                stats["attack"] = new_stats["attack"]
+                stats["defense"] = new_stats["defense"]
             
             level_ups = stats["level"] - initial_level
             
@@ -268,6 +270,9 @@ async def finalizar_miniboss(update: Update, context: ContextTypes.DEFAULT_TYPE,
             if level_ups > 0:
                 mensaje += f"\n🆙 ¡Has subido {level_ups} nivel{'es' if level_ups > 1 else ''} de combate! Nuevo nivel: {stats['level']}"
             
+            mensaje += f"\n\n🎖️ Nivel de Combate: {stats['level']}"
+            mensaje += f"\n💫 EXP: {stats['exp']}/{exp_needed_for_level(stats['level'])}"
+            mensaje += f"\n🌺 Coral de Fuego: {stats['fire_coral']}"
             mensaje += f"\n\n⚔️ Intentos restantes hoy: {get_attempts_remaining(player)}"
             
             keyboard = [[InlineKeyboardButton("🏠 Volver al Menú", callback_data="start")]]
