@@ -299,8 +299,6 @@ def main():
 
         # Add premmium items
         application.add_handler(CallbackQueryHandler(get_premium_item, pattern=r'^get_premium_'))
-
-        setup_weekly_contest(application)
     
         # Set up the weekly contest
         job_queue = application.job_queue

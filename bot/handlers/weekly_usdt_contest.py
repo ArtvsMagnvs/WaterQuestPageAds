@@ -2,9 +2,9 @@
 
 import random
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
+from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, CallbackContext
 from bot.config.settings import logger
 from bot.utils.save_system import save_game_data
 
@@ -271,17 +271,33 @@ async def show_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(ranking_message)
 
-def setup_weekly_contest(application):
-    """Set up the weekly contest handlers and initial job."""
-    application.add_handler(CallbackQueryHandler(view_ad, pattern="^view_ad$"))
-    application.add_handler(CommandHandler("contest_status", contest_status))
-    application.add_handler(CommandHandler("ranking", show_ranking))
-    
-    # Schedule the first contest
-    next_contest_time = get_next_contest_start_time()
-    application.job_queue.run_once(start_weekly_contest, next_contest_time - datetime.now())
+from datetime import datetime, timedelta, time
 
-    # Schedule daily reminders
-    application.job_queue.run_daily(send_daily_reminder, time=datetime.time(hour=12, minute=0, second=0))
+def setup_weekly_contest(context: CallbackContext):
+    """Set up the weekly contest."""
+    now = datetime.now()
+    
+    # Set the contest to start at the next occurrence of Monday at 00:00
+    start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    while start_time.weekday() != 0:  # 0 is Monday
+        start_time += timedelta(days=1)
+    
+    # Set the end time to 7 days after the start time
+    end_time = start_time + timedelta(days=7)
+    
+    if TEST_MODE:
+        # For testing: start immediately and end after 1 minute
+        start_time = now
+        end_time = start_time + timedelta(minutes=1)
+    
+    context.bot_data["weekly_contest"] = {
+        "start_time": start_time,
+        "end_time": end_time,
+        "participants": {}
+    }
+    
+    # Schedule the start and end of the contest
+    context.job_queue.run_once(start_weekly_contest, start_time)
+    context.job_queue.run_once(end_weekly_contest, end_time)
 
 
